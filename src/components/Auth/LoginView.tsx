@@ -202,6 +202,31 @@ export const LoginView: React.FC = () => {
       if (!userProfile) {
         const defaultSchoolName = selectedSchool?.name || 'General Campus';
         const defaultSchoolId = selectedSchool?.id || 'school-general';
+
+        if (!schools.some((s) => s.id === defaultSchoolId)) {
+          const defaultSchool: School = {
+            id: defaultSchoolId,
+            name: defaultSchoolName,
+            username: defaultSchoolName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            location: 'Main Campus',
+            region: 'National',
+            website: 'https://campusconnect.edu',
+            established: new Date().getFullYear(),
+            studentCount: 1,
+            followersCount: 1,
+            logo: `https://api.dicebear.com/7.x/identicon/svg?seed=${defaultSchoolId}`,
+            coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+            description: `Official Campus Connect community for ${defaultSchoolName}`,
+            motto: 'Knowledge, Integrity & Excellence',
+            isVerified: true,
+            rankings: {
+              activeRank: 1,
+              challengeWins: 0,
+              popularityScore: 90
+            }
+          };
+          addSchool(defaultSchool);
+        }
         userProfile = {
           id: fbUser.uid,
           name: fbUser.displayName || 'Campus Member',

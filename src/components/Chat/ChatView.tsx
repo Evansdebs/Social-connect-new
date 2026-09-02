@@ -29,11 +29,18 @@ export const ChatView: React.FC = () => {
   const [chatSearch, setChatSearch] = useState('');
   const [mediaAttachment, setMediaAttachment] = useState('');
   const [showMediaInput, setShowMediaInput] = useState(false);
-  const [showMobileChatPane, setShowMobileChatPane] = useState(false);
+  const [showMobileChatPane, setShowMobileChatPane] = useState(Boolean(activeConversationId));
 
+  // Fix #12: Don't auto-force open the first conversation on mobile devices
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640;
   const activeConv =
-    conversations.find((c) => c.id === activeConversationId) || conversations[0];
+    conversations.find((c) => c.id === activeConversationId) || (isDesktop ? conversations[0] : undefined);
 
+  React.useEffect(() => {
+    if (activeConversationId) {
+      setShowMobileChatPane(true);
+    }
+  }, [activeConversationId]);
   const filteredConversations = conversations.filter((c) =>
     c.participant.name.toLowerCase().includes(chatSearch.toLowerCase()) ||
     c.participant.school.toLowerCase().includes(chatSearch.toLowerCase())

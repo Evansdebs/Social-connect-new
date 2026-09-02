@@ -58,21 +58,7 @@ import {
 } from '../lib/firestoreService';
 import {
   DEFAULT_GUEST_USER,
-  DEFAULT_BLANK_SCHOOL,
-  INITIAL_USERS,
-  INITIAL_SCHOOLS,
-  INITIAL_POSTS,
-  INITIAL_COMMENTS,
-  INITIAL_STORIES,
-  INITIAL_REELS,
-  INITIAL_CLUBS,
-  INITIAL_CHALLENGES,
-  INITIAL_EVENTS,
-  INITIAL_OPPORTUNITIES,
-  INITIAL_CONVERSATIONS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_MEMORIES,
-  INITIAL_REPORTS
+  DEFAULT_BLANK_SCHOOL
 } from '../data/initialData';
 
 export type ActiveTab =
@@ -127,6 +113,7 @@ interface AppContextType {
   getSchoolPermissions: (schoolId?: string) => SchoolStaffPermissions | null;
   assignSchoolStaff: (record: Omit<SchoolStaffRecord, 'id' | 'assignedAt'>) => void;
   removeSchoolStaff: (staffId: string) => void;
+  isPostsLoading: boolean;
   posts: Post[];
   createPost: (post: Omit<Post, 'id' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'repostsCount' | 'createdAt'>) => void;
   deletePost: (postId: string) => void;
@@ -187,115 +174,54 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Purge any legacy dummy items from localStorage once for a clean production slate
-  if (typeof window !== 'undefined') {
-    const version = localStorage.getItem('cc_clean_prod_v2');
+  // Fix #16: Move localStorage purge to useEffect so it doesn't run on every render
+  useEffect(() => {
+    const version = localStorage.getItem('cc_clean_prod_v3');
     if (!version) {
       const keysToClean = [
-        'cc_users',
-        'cc_current_user_id',
-        'cc_schools',
-        'cc_selected_school_id',
-        'cc_posts',
-        'cc_comments',
-        'cc_saved_posts',
-        'cc_stories',
-        'cc_reels',
-        'cc_clubs',
-        'cc_challenges',
-        'cc_events',
-        'cc_opportunities',
-        'cc_conversations',
-        'cc_notifications',
-        'cc_reports',
-        'cc_followed_users',
-        'cc_connected_users'
+        'cc_users', 'cc_current_user_id', 'cc_schools', 'cc_selected_school_id',
+        'cc_posts', 'cc_comments', 'cc_saved_posts', 'cc_stories', 'cc_reels',
+        'cc_clubs', 'cc_challenges', 'cc_events', 'cc_opportunities',
+        'cc_conversations', 'cc_notifications', 'cc_reports',
+        'cc_followed_users', 'cc_connected_users'
       ];
       keysToClean.forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem('cc_clean_prod_v2', 'true');
+      localStorage.setItem('cc_clean_prod_v3', 'true');
     }
-  }
+  }, []);
 
-  // Load state or default to empty production state
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('cc_users');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Fix #5: Only user-preference state is hydrated from localStorage.
+  // Firestore-backed collections (posts, stories, etc.) start empty and are
+  // populated exclusively by real-time Firestore listeners — preventing the
+  // stale-localStorage-overrides-fresh-Firestore conflict.
+  const [users, setUsers] = useState<User[]>([]);
 
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
     return localStorage.getItem('cc_current_user_id') || '';
   });
 
-  const [schools, setSchools] = useState<School[]>(() => {
-    const saved = localStorage.getItem('cc_schools');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [schools, setSchools] = useState<School[]>([]);
 
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(() => {
     return localStorage.getItem('cc_selected_school_id') || null;
   });
 
-  const [posts, setPosts] = useState<Post[]>(() => {
-    const saved = localStorage.getItem('cc_posts');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [isPostsLoading, setIsPostsLoading] = useState<boolean>(true);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [comments, setComments] = useState<Record<string, Comment[]>>({});
+  const [stories, setStories] = useState<Story[]>([]);
+  const [reels, setReels] = useState<Reel[]>([]);
+  const [clubs, setClubs] = useState<GroupClub[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [events, setEvents] = useState<CampusEvent[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [reports, setReports] = useState<ReportItem[]>([]);
 
-  const [comments, setComments] = useState<Record<string, Comment[]>>(() => {
-    const saved = localStorage.getItem('cc_comments');
-    return saved ? JSON.parse(saved) : {};
-  });
-
+  // Fix #5: Only persisted user-preference state stays in localStorage
   const [savedPostIds, setSavedPostIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('cc_saved_posts');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [stories, setStories] = useState<Story[]>(() => {
-    const saved = localStorage.getItem('cc_stories');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [reels, setReels] = useState<Reel[]>(() => {
-    const saved = localStorage.getItem('cc_reels');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [clubs, setClubs] = useState<GroupClub[]>(() => {
-    const saved = localStorage.getItem('cc_clubs');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [challenges, setChallenges] = useState<Challenge[]>(() => {
-    const saved = localStorage.getItem('cc_challenges');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [events, setEvents] = useState<CampusEvent[]>(() => {
-    const saved = localStorage.getItem('cc_events');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(() => {
-    const saved = localStorage.getItem('cc_opportunities');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [conversations, setConversations] = useState<Conversation[]>(() => {
-    const saved = localStorage.getItem('cc_conversations');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    const saved = localStorage.getItem('cc_notifications');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [schoolMemories] = useState<SchoolMemoryAlbum[]>([]);
-
-  const [reports, setReports] = useState<ReportItem[]>(() => {
-    const saved = localStorage.getItem('cc_reports');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -309,10 +235,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Fix #2: Per-user like tracking stored locally — prevents likedByUser
+  // being shared across all users when Firestore snapshots update the global post doc
+  const [likedPostIds, setLikedPostIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('cc_liked_posts');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [likedReelIds, setLikedReelIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('cc_liked_reels');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [schoolStaff, setSchoolStaff] = useState<SchoolStaffRecord[]>(() => {
     const saved = localStorage.getItem('cc_school_staff');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [schoolMemories] = useState<SchoolMemoryAlbum[]>([]);
+
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -325,70 +267,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [firebaseUserEmail, setFirebaseUserEmail] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
 
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem('cc_users', JSON.stringify(users));
-  }, [users]);
-
+  // Fix #5: Only persist user-preference state to localStorage.
+  // Firestore-backed content (posts, reels, etc.) must NOT be written to localStorage
+  // because Firestore real-time listeners are the authoritative source and will overwrite anyway.
   useEffect(() => {
     localStorage.setItem('cc_current_user_id', currentUserId);
   }, [currentUserId]);
 
   useEffect(() => {
-    localStorage.setItem('cc_schools', JSON.stringify(schools));
-  }, [schools]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_school_staff', JSON.stringify(schoolStaff));
-  }, [schoolStaff]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_posts', JSON.stringify(posts));
-  }, [posts]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_comments', JSON.stringify(comments));
-  }, [comments]);
-
-  useEffect(() => {
     localStorage.setItem('cc_saved_posts', JSON.stringify(savedPostIds));
   }, [savedPostIds]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_stories', JSON.stringify(stories));
-  }, [stories]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_reels', JSON.stringify(reels));
-  }, [reels]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_clubs', JSON.stringify(clubs));
-  }, [clubs]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_challenges', JSON.stringify(challenges));
-  }, [challenges]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_events', JSON.stringify(events));
-  }, [events]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_opportunities', JSON.stringify(opportunities));
-  }, [opportunities]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_conversations', JSON.stringify(conversations));
-  }, [conversations]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  useEffect(() => {
-    localStorage.setItem('cc_reports', JSON.stringify(reports));
-  }, [reports]);
 
   useEffect(() => {
     localStorage.setItem('cc_followed_users', JSON.stringify(followedUserIds));
@@ -398,11 +286,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('cc_connected_users', JSON.stringify(connectedUserIds));
   }, [connectedUserIds]);
 
+  useEffect(() => {
+    localStorage.setItem('cc_school_staff', JSON.stringify(schoolStaff));
+  }, [schoolStaff]);
+
+  // Fix #2: Persist per-user like state locally
+  useEffect(() => {
+    localStorage.setItem('cc_liked_posts', JSON.stringify(likedPostIds));
+  }, [likedPostIds]);
+
+  useEffect(() => {
+    localStorage.setItem('cc_liked_reels', JSON.stringify(likedReelIds));
+  }, [likedReelIds]);
+
+  useEffect(() => {
+    localStorage.setItem('cc_selected_school_id', selectedSchoolId || '');
+  }, [selectedSchoolId]);
+
+
   // Firestore & Firebase Auth real-time sync
   useEffect(() => {
     let safetyTimer = setTimeout(() => {
       setIsAuthChecking(false);
-    }, 1200);
+      setIsPostsLoading(false);
+    }, 2000);
 
     // Listen for Firebase Auth user
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
@@ -471,13 +378,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // Real-time live posts stream
+    // Fix #2: likedByUser is resolved from local likedPostIds so each user sees their own like state
     const unsubPosts = subscribeToPosts((livePosts) => {
-      setPosts((prev) => {
-        return livePosts.map((lp) => {
-          const existing = prev.find((p) => p.id === lp.id);
-          return existing ? { ...lp, likedByUser: existing.likedByUser, userReaction: existing.userReaction } : lp;
-        });
-      });
+      setPosts(livePosts.map((lp) => ({
+        ...lp,
+        likedByUser: false, // will be computed via derived value below
+      })));
+      setIsPostsLoading(false);
     });
 
     // Real-time stories stream
@@ -746,21 +653,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Post published to Campus Connect!', 'success');
   };
 
+  // Fix #2: track per-user likes in likedPostIds (localStorage) rather than relying on
+  // the global Firestore post document's likedByUser field (which is shared across all users)
   const likePost = (postId: string, reaction: 'like' | 'love' | 'funny' | 'celebrate' | 'wow' = 'like') => {
+    const alreadyLiked = likedPostIds.includes(postId);
+    setLikedPostIds((prev) =>
+      alreadyLiked ? prev.filter((id) => id !== postId) : [...prev, postId]
+    );
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id !== postId) return p;
-        const alreadyLiked = p.likedByUser;
-        const updated = {
+        const newCount = alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1;
+        updatePostInFirebase(postId, { likesCount: newCount });
+        return {
           ...p,
           likedByUser: !alreadyLiked,
-          likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
+          likesCount: newCount,
           userReaction: alreadyLiked ? undefined : reaction
         };
-        updatePostInFirebase(postId, {
-          likesCount: updated.likesCount
-        });
-        return updated;
       })
     );
   };
@@ -928,18 +838,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Reel published to Campus Connect!', 'success');
   };
 
+  // Fix #2: track per-user reel likes in likedReelIds
   const likeReel = (reelId: string) => {
+    const alreadyLiked = likedReelIds.includes(reelId);
+    setLikedReelIds((prev) =>
+      alreadyLiked ? prev.filter((id) => id !== reelId) : [...prev, reelId]
+    );
     setReels((prev) =>
       prev.map((r) => {
         if (r.id !== reelId) return r;
-        const liked = r.likedByUser;
-        const newLikes = liked ? Math.max(0, r.likesCount - 1) : r.likesCount + 1;
+        const newLikes = alreadyLiked ? Math.max(0, r.likesCount - 1) : r.likesCount + 1;
         updateReelInFirebase(reelId, { likesCount: newLikes });
-        return {
-          ...r,
-          likedByUser: !liked,
-          likesCount: newLikes
-        };
+        return { ...r, likedByUser: !alreadyLiked, likesCount: newLikes };
       })
     );
   };
@@ -1190,6 +1100,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Local application storage cleared.', 'info');
   };
 
+  // Fix #2: Derive posts/reels with per-user like state injected
+  // This ensures likedByUser is always per-user (from localStorage) even after Firestore snapshot resets it
+  const postsWithLikes = posts.map((p) => ({
+    ...p,
+    likedByUser: likedPostIds.includes(p.id)
+  }));
+
+  const reelsWithLikes = reels.map((r) => ({
+    ...r,
+    likedByUser: likedReelIds.includes(r.id)
+  }));
+
   return (
     <AppContext.Provider
       value={{
@@ -1219,7 +1141,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getSchoolPermissions,
         assignSchoolStaff,
         removeSchoolStaff,
-        posts,
+        isPostsLoading,
+        posts: postsWithLikes,
         createPost,
         deletePost,
         likePost,
@@ -1234,7 +1157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createStory,
         deleteStory,
         markStoryViewed,
-        reels,
+        reels: reelsWithLikes,
         createReel,
         likeReel,
         deleteReel,

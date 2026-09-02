@@ -6,10 +6,19 @@ import { PostCard } from './PostCard';
 import { Globe, Building2, Users, Megaphone, Sparkles } from 'lucide-react';
 
 export const Feed: React.FC = () => {
-  const { posts, currentUser, followedUserIds, connectedUserIds } = useApp();
-  const [feedFilter, setFeedFilter] = useState<
+  const { posts, isPostsLoading, currentUser, followedUserIds, connectedUserIds } = useApp();
+  
+  // Fix #15: Persist feedFilter across tab switches in sessionStorage
+  const [feedFilter, setFeedFilterState] = useState<
     'global' | 'my_school' | 'network' | 'announcements'
-  >('global');
+  >(() => {
+    return (sessionStorage.getItem('cc_feed_filter') as any) || 'global';
+  });
+
+  const setFeedFilter = (filter: 'global' | 'my_school' | 'network' | 'announcements') => {
+    setFeedFilterState(filter);
+    sessionStorage.setItem('cc_feed_filter', filter);
+  };
 
   // Filter posts based on selected feed tab
   const filteredPosts = posts.filter((post) => {
@@ -72,7 +81,33 @@ export const Feed: React.FC = () => {
       </div>
 
       {/* Posts Stream */}
-      {filteredPosts.length > 0 ? (
+      {isPostsLoading ? (
+        // Fix #10: Post loading skeleton to prevent false empty-state flicker
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs animate-pulse space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-neutral-200" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="w-28 h-3.5 bg-neutral-200 rounded" />
+                  <div className="w-40 h-2.5 bg-neutral-150 rounded" />
+                </div>
+              </div>
+              <div className="space-y-2 pt-1">
+                <div className="w-full h-3 bg-neutral-200 rounded" />
+                <div className="w-4/5 h-3 bg-neutral-200 rounded" />
+                <div className="w-1/2 h-3 bg-neutral-200 rounded" />
+              </div>
+              <div className="h-44 bg-neutral-150 rounded-xl" />
+              <div className="flex justify-between pt-2 border-t border-neutral-100">
+                <div className="w-16 h-4 bg-neutral-200 rounded" />
+                <div className="w-16 h-4 bg-neutral-200 rounded" />
+                <div className="w-16 h-4 bg-neutral-200 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredPosts.length > 0 ? (
         <div className="space-y-4">
           {filteredPosts.map((post) => (
             <PostCard key={post.id} post={post} />

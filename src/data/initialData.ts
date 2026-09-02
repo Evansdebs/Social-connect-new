@@ -1,19 +1,4 @@
-import {
-  User,
-  School,
-  Post,
-  Comment,
-  Story,
-  Reel,
-  GroupClub,
-  Challenge,
-  CampusEvent,
-  Opportunity,
-  Conversation,
-  NotificationItem,
-  SchoolMemoryAlbum,
-  ReportItem
-} from '../types';
+import { User, School } from '../types';
 
 export const DEFAULT_GUEST_USER: User = {
   id: 'guest',
@@ -62,19 +47,3 @@ export const DEFAULT_BLANK_SCHOOL: School = {
     popularityScore: 0
   }
 };
-
-// All initial datasets start completely empty for real user-generated content in production
-export const INITIAL_SCHOOLS: School[] = [];
-export const INITIAL_USERS: User[] = [];
-export const INITIAL_STORIES: Story[] = [];
-export const INITIAL_POSTS: Post[] = [];
-export const INITIAL_COMMENTS: Comment[] = [];
-export const INITIAL_REELS: Reel[] = [];
-export const INITIAL_CLUBS: GroupClub[] = [];
-export const INITIAL_CHALLENGES: Challenge[] = [];
-export const INITIAL_EVENTS: CampusEvent[] = [];
-export const INITIAL_OPPORTUNITIES: Opportunity[] = [];
-export const INITIAL_CONVERSATIONS: Conversation[] = [];
-export const INITIAL_NOTIFICATIONS: NotificationItem[] = [];
-export const INITIAL_MEMORIES: SchoolMemoryAlbum[] = [];
-export const INITIAL_REPORTS: ReportItem[] = [];

@@ -103,7 +103,7 @@ const AppContent: React.FC = () => {
 
         {/* Center Dynamic Content View */}
         <main className="flex-1 min-w-0 max-w-full">
-          {(activeTab === 'home' || activeTab === 'feed') && <Feed />}
+          {activeTab === 'home' && <Feed />}
           {activeTab === 'reels' && <ReelsViewer />}
           {activeTab === 'discover' && <DiscoverView />}
           {activeTab === 'schools' && <SchoolProfileView />}

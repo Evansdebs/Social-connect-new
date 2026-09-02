@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
@@ -8,11 +8,38 @@ import { GoogleGenAI } from '@google/genai';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Fix #19: Simple in-memory rate limiter for AI endpoints (10 req/min per IP)
+const aiRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const AI_RATE_LIMIT = 10;
+const AI_RATE_WINDOW_MS = 60_000;
+
+function aiRateLimiter(req: Request, res: Response, next: NextFunction) {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const record = aiRateLimitMap.get(ip);
+
+  if (!record || now > record.resetAt) {
+    aiRateLimitMap.set(ip, { count: 1, resetAt: now + AI_RATE_WINDOW_MS });
+    return next();
+  }
+
+  if (record.count >= AI_RATE_LIMIT) {
+    return res.status(429).json({
+      error: 'Too many AI requests. Please wait a moment before trying again.',
+      retryAfterSeconds: Math.ceil((record.resetAt - now) / 1000)
+    });
+  }
+
+  record.count++;
+  return next();
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+  app.use('/api/ai', aiRateLimiter);
 
   // Lazy Gemini client helper
   const getGeminiClient = () => {

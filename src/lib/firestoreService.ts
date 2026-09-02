@@ -47,10 +47,11 @@ export function subscribeToPosts(onUpdate: (posts: Post[]) => void) {
         snapshot.forEach((d) => {
           list.push({ ...d.data(), id: d.id } as Post);
         });
+        // Fix #17: sort by createdAt ISO string (newest first); posts use createdAt not timestamp
         list.sort((a, b) => {
-          const timeA = (a as any).timestamp || 0;
-          const timeB = (b as any).timestamp || 0;
-          return timeB - timeA;
+          const tA = a.createdAt || '';
+          const tB = b.createdAt || '';
+          return tB.localeCompare(tA);
         });
         onUpdate(list);
       },
@@ -74,10 +75,11 @@ export function subscribeToStories(onUpdate: (stories: Story[]) => void) {
         snapshot.forEach((d) => {
           list.push({ ...d.data(), id: d.id } as Story);
         });
+        // Fix #17: sort by createdAt ISO string (newest first)
         list.sort((a, b) => {
-          const timeA = (a as any).timestamp || 0;
-          const timeB = (b as any).timestamp || 0;
-          return timeB - timeA;
+          const tA = a.createdAt || '';
+          const tB = b.createdAt || '';
+          return tB.localeCompare(tA);
         });
         onUpdate(list);
       },

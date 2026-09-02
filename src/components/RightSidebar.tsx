@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Trophy, TrendingUp, UserPlus, Check, Sparkles, Flame, ChevronRight } from 'lucide-react';
+import { Trophy, TrendingUp, UserPlus, Check, Flame, ChevronRight } from 'lucide-react';
 
 export const RightSidebar: React.FC = () => {
   const {
@@ -11,22 +11,37 @@ export const RightSidebar: React.FC = () => {
     connectedUserIds,
     requestConnection,
     setActiveTab,
-    setSearchQuery
+    setSearchQuery,
+    posts
   } = useApp();
 
   const activeChallenge = challenges[0];
 
   const candidateUsers = users.filter(
-    (u) => u.id !== currentUser.id && u.role === 'student'
+    (u) => u.id !== currentUser.id && u.role !== 'super_admin'
   );
 
-  const trendingTopics = [
-    { tag: '#InterSchoolDerby', postsCount: '1.4k posts', category: 'High School Sports' },
-    { tag: '#RoboticsLeague2026', postsCount: '890 posts', category: 'STEM & Coding' },
-    { tag: '#LivingSpringChoir', postsCount: '620 posts', category: 'Music & Arts' },
-    { tag: '#AchimotaDebate', postsCount: '450 posts', category: 'Oratory' },
-    { tag: '#CampusConnect', postsCount: '3.8k posts', category: 'Trending Platform' }
-  ];
+  const trendingTopics = useMemo(() => {
+    const tagCount: Record<string, number> = {};
+    posts.forEach((p) => (p.tags || []).forEach((t) => {
+      const tag = t.startsWith('#') ? t : `#${t}`;
+      tagCount[tag] = (tagCount[tag] || 0) + 1;
+    }));
+    const dynamic = Object.entries(tagCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag, count]) => ({ tag, postsCount: `${count} post${count !== 1 ? 's' : ''}`, category: 'Trending' }));
+    if (dynamic.length === 0) {
+      return [
+        { tag: '#InterSchoolDerby', postsCount: 'Trending', category: 'High School Sports' },
+        { tag: '#RoboticsLeague', postsCount: 'Trending', category: 'STEM & Coding' },
+        { tag: '#CampusConnect', postsCount: 'Trending', category: 'Platform' },
+        { tag: '#StudentLife', postsCount: 'Trending', category: 'Campus' },
+        { tag: '#Competitions', postsCount: 'Trending', category: 'Events' }
+      ];
+    }
+    return dynamic;
+  }, [posts]);
 
   return (
     <aside className="w-80 shrink-0 hidden xl:flex flex-col gap-4 py-4 select-none">

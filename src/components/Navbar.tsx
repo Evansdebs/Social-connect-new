@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Search,
@@ -43,6 +43,23 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+
+  // Fix #9: refs for click-outside detection
+  const notifRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifMenu(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +179,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
           </button>
 
           {/* Notifications Bell */}
-          <div className="relative">
+          <div className="relative" ref={notifRef}>
             <button
               id="nav-notifications-btn"
               onClick={() => setShowNotifMenu(!showNotifMenu)}
@@ -239,7 +256,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
           </div>
 
           {/* User Persona Switcher & Profile Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             {!isFirebaseAuthActive && currentUser.id === 'guest' ? (
               <button
                 onClick={() => openModal('auth')}
