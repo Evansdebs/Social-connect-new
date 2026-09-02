@@ -1,0 +1,6 @@
+{
+  "name": "Campus Connect",
+  "description": "A school-centered social media & community platform connecting students, schools, clubs, and creators across campuses.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
