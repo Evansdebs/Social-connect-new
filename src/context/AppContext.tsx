@@ -15,19 +15,31 @@ import {
   SchoolMemoryAlbum,
   ReportItem
 } from '../types';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
   seedFirestoreInitialData,
   subscribeToPosts,
+  subscribeToStories,
+  subscribeToReels,
+  subscribeToConversations,
+  subscribeToComments,
   savePostToFirebase,
   updatePostInFirebase,
+  deletePostFromFirebase,
   saveStoryToFirebase,
   saveReelToFirebase,
   updateReelInFirebase,
   updateClubInFirebase,
   updateChallengeInFirebase,
+  updateEventInFirebase,
   saveConversationToFirebase,
   saveReportToFirebase,
-  updateUserInFirebase
+  saveUserToFirebase,
+  updateUserInFirebase,
+  getUserFromFirebase,
+  saveCommentToFirebase,
+  deleteCommentFromFirebase
 } from '../lib/firestoreService';
 import {
   INITIAL_USERS,
@@ -67,11 +79,16 @@ export type ModalType =
   | 'share'
   | 'school_admin'
   | 'platform_admin'
-  | 'edit_profile';
+  | 'edit_profile'
+  | 'auth';
 
 interface AppContextType {
   currentUser: User;
   users: User[];
+  isFirebaseAuthActive: boolean;
+  firebaseUserEmail: string | null;
+  setAuthUser: (user: User) => void;
+  signOutUser: () => Promise<void>;
   switchUser: (userId: string) => void;
   updateCurrentUserProfile: (updatedData: Partial<User>) => void;
   schools: School[];
@@ -237,6 +254,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [modalTargetData, setModalTargetData] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
+  // Real Firebase Authentication status
+  const [isFirebaseAuthActive, setIsFirebaseAuthActive] = useState<boolean>(false);
+  const [firebaseUserEmail, setFirebaseUserEmail] = useState<string | null>(null);
+
   // Sync to local storage
   useEffect(() => {
     localStorage.setItem('cc_users', JSON.stringify(users));
@@ -306,24 +327,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('cc_connected_users', JSON.stringify(connectedUserIds));
   }, [connectedUserIds]);
 
-  // Firestore sync: seed initial data on load and subscribe to live post stream
+  // Firestore & Firebase Auth real-time sync
   useEffect(() => {
     seedFirestoreInitialData();
-    const unsubscribe = subscribeToPosts((livePosts) => {
+
+    // Listen for Firebase Auth user
+    const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        setIsFirebaseAuthActive(true);
+        setFirebaseUserEmail(fbUser.email);
+        try {
+          const profile = await getUserFromFirebase(fbUser.uid);
+          if (profile) {
+            setUsers((prev) => {
+              const idx = prev.findIndex((u) => u.id === profile.id);
+              if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = profile;
+                return copy;
+              }
+              return [profile, ...prev];
+            });
+            setCurrentUserId(profile.id);
+          }
+        } catch (err) {
+          console.warn('Firebase user sync note:', err);
+        }
+      } else {
+        setIsFirebaseAuthActive(false);
+        setFirebaseUserEmail(null);
+      }
+    });
+
+    // Real-time live posts stream
+    const unsubPosts = subscribeToPosts((livePosts) => {
       if (livePosts && livePosts.length > 0) {
         setPosts((prev) => {
-          // Merge live posts with local reactions if any
-          const merged = livePosts.map((lp) => {
+          return livePosts.map((lp) => {
             const existing = prev.find((p) => p.id === lp.id);
             return existing ? { ...lp, likedByUser: existing.likedByUser, userReaction: existing.userReaction } : lp;
           });
-          return merged;
+        });
+      }
+    });
+
+    // Real-time stories stream
+    const unsubStories = subscribeToStories((liveStories) => {
+      if (liveStories && liveStories.length > 0) {
+        setStories(liveStories);
+      }
+    });
+
+    // Real-time reels stream
+    const unsubReels = subscribeToReels((liveReels) => {
+      if (liveReels && liveReels.length > 0) {
+        setReels(liveReels);
+      }
+    });
+
+    // Real-time conversations stream
+    const unsubConvs = subscribeToConversations((liveConvs) => {
+      if (liveConvs && liveConvs.length > 0) {
+        setConversations(liveConvs);
+      }
+    });
+
+    // Real-time comments stream
+    const unsubComments = subscribeToComments((liveComments) => {
+      if (liveComments && liveComments.length > 0) {
+        setComments((prev) => {
+          const updated: Record<string, Comment[]> = { ...prev };
+          liveComments.forEach((c) => {
+            if (!updated[c.postId]) updated[c.postId] = [];
+            if (!updated[c.postId].some((e) => e.id === c.id)) {
+              updated[c.postId].push(c);
+            }
+          });
+          return updated;
         });
       }
     });
 
     return () => {
-      unsubscribe();
+      unsubAuth();
+      unsubPosts();
+      unsubStories();
+      unsubReels();
+      unsubConvs();
+      unsubComments();
     };
   }, []);
 
@@ -335,6 +426,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const currentUser = users.find((u) => u.id === currentUserId) || users[0];
+
+  const setAuthUser = (user: User) => {
+    setUsers((prev) => {
+      const idx = prev.findIndex((u) => u.id === user.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = user;
+        return copy;
+      }
+      return [user, ...prev];
+    });
+    setCurrentUserId(user.id);
+    if (user.schoolId) setSelectedSchoolId(user.schoolId);
+    setIsFirebaseAuthActive(true);
+    setFirebaseUserEmail(user.email);
+  };
+
+  const signOutUser = async () => {
+    try {
+      await signOut(auth);
+      setIsFirebaseAuthActive(false);
+      setFirebaseUserEmail(null);
+      setCurrentUserId('user-kwame');
+      showToast('Signed out of Firebase account.', 'info');
+    } catch (err: any) {
+      showToast('Sign out issue: ' + err.message, 'error');
+    }
+  };
 
   const switchUser = (userId: string) => {
     setCurrentUserId(userId);
@@ -351,7 +470,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers((prev) =>
       prev.map((u) => (u.id === currentUser.id ? { ...u, ...updatedData } : u))
     );
-    showToast('Profile updated successfully!', 'success');
+    updateUserInFirebase(currentUser.id, updatedData);
+    showToast('Profile updated & synced to Cloud Firestore!', 'success');
   };
 
   const activeSchool = schools.find((s) => s.id === selectedSchoolId) || schools[0];
@@ -456,6 +576,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPosts((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p))
     );
+    saveCommentToFirebase(newComment);
+    updatePostInFirebase(postId, { commentsCount: (posts.find(p => p.id === postId)?.commentsCount || 0) + 1 });
     showToast('Comment added!', 'success');
   };
 
@@ -467,6 +589,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPosts((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, commentsCount: Math.max(0, p.commentsCount - 1) } : p))
     );
+    deleteCommentFromFirebase(commentId);
   };
 
   const votePoll = (postId: string, optionId: string) => {
@@ -567,11 +690,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((c) => {
         if (c.id !== clubId) return c;
         const nextJoined = !c.isJoined;
+        const newCount = nextJoined ? c.membersCount + 1 : Math.max(0, c.membersCount - 1);
+        updateClubInFirebase(clubId, { isJoined: nextJoined, membersCount: newCount });
         showToast(nextJoined ? `Joined ${c.name}!` : `Left ${c.name}`, 'info');
         return {
           ...c,
           isJoined: nextJoined,
-          membersCount: nextJoined ? c.membersCount + 1 : Math.max(0, c.membersCount - 1)
+          membersCount: newCount
         };
       })
     );
@@ -589,6 +714,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const isA = ch.schoolA.id === schoolId;
         const updatedA = isA ? { ...ch.schoolA, votes: ch.schoolA.votes + 1 } : ch.schoolA;
         const updatedB = !isA ? { ...ch.schoolB, votes: ch.schoolB.votes + 1 } : ch.schoolB;
+        const newTotal = ch.totalCheeringCount + 1;
+
+        updateChallengeInFirebase(challengeId, {
+          schoolA: updatedA,
+          schoolB: updatedB,
+          userVotedFor: schoolId,
+          totalCheeringCount: newTotal
+        });
 
         showToast('Vote cheered! Your school score increased!', 'success');
         return {
@@ -596,7 +729,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           schoolA: updatedA,
           schoolB: updatedB,
           userVotedFor: schoolId,
-          totalCheeringCount: ch.totalCheeringCount + 1
+          totalCheeringCount: newTotal
         };
       })
     );
@@ -616,11 +749,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (status === 'interested') newInterested++;
         if (status === 'going') newGoing++;
 
+        const finalInterested = Math.max(0, newInterested);
+        const finalGoing = Math.max(0, newGoing);
+
+        updateEventInFirebase(eventId, {
+          interestedCount: finalInterested,
+          goingCount: finalGoing,
+          userStatus: status
+        });
+
         showToast(status ? `RSVP saved as ${status}!` : 'RSVP cancelled', 'success');
         return {
           ...ev,
-          interestedCount: Math.max(0, newInterested),
-          goingCount: Math.max(0, newGoing),
+          interestedCount: finalInterested,
+          goingCount: finalGoing,
           userStatus: status
         };
       })
@@ -652,12 +794,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setConversations((prev) =>
       prev.map((conv) => {
         if (conv.id !== conversationId) return conv;
-        return {
+        const updated = {
           ...conv,
           lastMessage: text.trim() || 'Photo attachment',
           lastMessageTime: 'Just now',
           messages: [...conv.messages, newMsg]
         };
+        saveConversationToFirebase(updated);
+        return updated;
       })
     );
   };
@@ -714,6 +858,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending'
     };
     setReports((prev) => [newReport, ...prev]);
+    saveReportToFirebase(newReport);
     showToast('Report submitted. Our moderation team will review it promptly.', 'info');
     closeModal();
   };
@@ -779,6 +924,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         users,
+        isFirebaseAuthActive,
+        firebaseUserEmail,
+        setAuthUser,
+        signOutUser,
         switchUser,
         updateCurrentUserProfile,
         schools,

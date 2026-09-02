@@ -11,7 +11,10 @@ import {
   Check,
   RotateCcw,
   Menu,
-  X
+  X,
+  LogIn,
+  LogOut,
+  CloudCheck
 } from 'lucide-react';
 
 export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpen?: boolean }> = ({
@@ -22,6 +25,9 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
     currentUser,
     users,
     switchUser,
+    isFirebaseAuthActive,
+    firebaseUserEmail,
+    signOutUser,
     activeTab,
     setActiveTab,
     unreadNotifCount,
@@ -109,6 +115,27 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
 
         {/* Right Actions */}
         <div className="flex items-center gap-2">
+          {/* Production Cloud Connection Status Pill */}
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-bold text-emerald-700 select-none">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Cloud Firestore</span>
+          </div>
+
+          {/* Quick Sign In / Auth Button */}
+          {!isFirebaseAuthActive ? (
+            <button
+              onClick={() => openModal('auth')}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-600 text-blue-600 hover:bg-blue-50 font-bold text-xs transition-colors"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full font-bold">
+              <span>Cloud Active</span>
+            </div>
+          )}
+
           {/* Quick Create Button */}
           <button
             id="quick-create-btn"
@@ -243,13 +270,53 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-neutral-200 py-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-4 py-2 border-b border-neutral-100">
-                  <p className="text-xs text-neutral-400 uppercase font-semibold">Active Account</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-neutral-400 uppercase font-semibold">Active Account</p>
+                    {isFirebaseAuthActive ? (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                        Cloud Verified
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-neutral-150 text-neutral-600 font-semibold px-1.5 py-0.5 rounded">
+                        Demo Persona
+                      </span>
+                    )}
+                  </div>
                   <p className="font-bold text-sm text-neutral-900 truncate">{currentUser.name}</p>
-                  <p className="text-xs text-neutral-500">@{currentUser.username}</p>
+                  <p className="text-xs text-neutral-500 truncate">
+                    {isFirebaseAuthActive && firebaseUserEmail ? firebaseUserEmail : `@${currentUser.username}`}
+                  </p>
                   {currentUser.schoolName && (
-                    <span className="inline-block mt-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                    <span className="inline-block mt-1 text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full truncate max-w-full">
                       🏫 {currentUser.schoolName}
                     </span>
+                  )}
+                </div>
+
+                {/* Auth Actions */}
+                <div className="p-1 border-b border-neutral-100">
+                  {isFirebaseAuthActive ? (
+                    <button
+                      onClick={async () => {
+                        await signOutUser();
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out of Firebase</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        openModal('auth');
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span>Sign In / Create Cloud Account</span>
+                    </button>
                   )}
                 </div>
 

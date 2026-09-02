@@ -1,16 +1,14 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
-  addDoc,
   updateDoc,
   deleteDoc,
   onSnapshot,
   query,
-  orderBy,
-  limit,
-  serverTimestamp
+  limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 import {
@@ -43,7 +41,7 @@ import {
   INITIAL_REPORTS
 } from '../data/initialData';
 
-// Sync seed data to Firestore if collection is empty
+// Sync seed data to Firestore if collections are empty
 export async function seedFirestoreInitialData() {
   try {
     const postsCol = collection(db, 'posts');
@@ -111,7 +109,10 @@ export async function seedFirestoreInitialData() {
   }
 }
 
-// Subscriptions & real-time sync helpers
+// -------------------------------------------------------------
+// Real-time Subscriptions
+// -------------------------------------------------------------
+
 export function subscribeToPosts(onUpdate: (posts: Post[]) => void) {
   try {
     const q = query(collection(db, 'posts'));
@@ -120,10 +121,9 @@ export function subscribeToPosts(onUpdate: (posts: Post[]) => void) {
       (snapshot) => {
         if (!snapshot.empty) {
           const list: Post[] = [];
-          snapshot.forEach((doc) => {
-            list.push({ ...doc.data(), id: doc.id } as Post);
+          snapshot.forEach((d) => {
+            list.push({ ...d.data(), id: d.id } as Post);
           });
-          // Sort newest first
           list.sort((a, b) => {
             const timeA = (a as any).timestamp || 0;
             const timeB = (b as any).timestamp || 0;
@@ -133,16 +133,108 @@ export function subscribeToPosts(onUpdate: (posts: Post[]) => void) {
         }
       },
       (error) => {
-        console.warn('Firestore posts snapshot error, fallback to local:', error);
+        console.warn('Firestore posts snapshot warning:', error);
       }
     );
   } catch (e) {
-    console.warn('subscribeToPosts exception:', e);
+    console.warn('subscribeToPosts error:', e);
     return () => {};
   }
 }
 
-// Firestore operations
+export function subscribeToStories(onUpdate: (stories: Story[]) => void) {
+  try {
+    const q = query(collection(db, 'stories'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Story[] = [];
+          snapshot.forEach((d) => {
+            list.push({ ...d.data(), id: d.id } as Story);
+          });
+          list.sort((a, b) => {
+            const timeA = (a as any).timestamp || 0;
+            const timeB = (b as any).timestamp || 0;
+            return timeB - timeA;
+          });
+          onUpdate(list);
+        }
+      },
+      (error) => console.warn('Firestore stories snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToReels(onUpdate: (reels: Reel[]) => void) {
+  try {
+    const q = query(collection(db, 'reels'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Reel[] = [];
+          snapshot.forEach((d) => {
+            list.push({ ...d.data(), id: d.id } as Reel);
+          });
+          onUpdate(list);
+        }
+      },
+      (error) => console.warn('Firestore reels snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToConversations(onUpdate: (conversations: Conversation[]) => void) {
+  try {
+    const q = query(collection(db, 'conversations'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Conversation[] = [];
+          snapshot.forEach((d) => {
+            list.push({ ...d.data(), id: d.id } as Conversation);
+          });
+          onUpdate(list);
+        }
+      },
+      (error) => console.warn('Firestore conversations snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToComments(onUpdate: (comments: Comment[]) => void) {
+  try {
+    const q = query(collection(db, 'comments'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Comment[] = [];
+          snapshot.forEach((d) => {
+            list.push({ ...d.data(), id: d.id } as Comment);
+          });
+          onUpdate(list);
+        }
+      },
+      (error) => console.warn('Firestore comments snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+// -------------------------------------------------------------
+// CRUD Operations
+// -------------------------------------------------------------
+
 export async function savePostToFirebase(post: Post) {
   try {
     await setDoc(doc(db, 'posts', post.id), {
@@ -167,6 +259,25 @@ export async function deletePostFromFirebase(postId: string) {
     await deleteDoc(doc(db, 'posts', postId));
   } catch (err) {
     console.warn('deletePostFromFirebase offline fallback:', err);
+  }
+}
+
+export async function saveCommentToFirebase(comment: Comment) {
+  try {
+    await setDoc(doc(db, 'comments', comment.id), {
+      ...comment,
+      timestamp: Date.now()
+    });
+  } catch (err) {
+    console.warn('saveCommentToFirebase fallback:', err);
+  }
+}
+
+export async function deleteCommentFromFirebase(commentId: string) {
+  try {
+    await deleteDoc(doc(db, 'comments', commentId));
+  } catch (err) {
+    console.warn('deleteCommentFromFirebase fallback:', err);
   }
 }
 
@@ -213,6 +324,22 @@ export async function updateChallengeInFirebase(challengeId: string, partial: Pa
   }
 }
 
+export async function updateEventInFirebase(eventId: string, partial: Partial<CampusEvent>) {
+  try {
+    await updateDoc(doc(db, 'events', eventId), partial);
+  } catch (err) {
+    console.warn('updateEventInFirebase fallback:', err);
+  }
+}
+
+export async function saveEventToFirebase(event: CampusEvent) {
+  try {
+    await setDoc(doc(db, 'events', event.id), event);
+  } catch (err) {
+    console.warn('saveEventToFirebase fallback:', err);
+  }
+}
+
 export async function saveConversationToFirebase(conversation: Conversation) {
   try {
     await setDoc(doc(db, 'conversations', conversation.id), conversation);
@@ -229,10 +356,31 @@ export async function saveReportToFirebase(report: ReportItem) {
   }
 }
 
+export async function saveUserToFirebase(user: User) {
+  try {
+    await setDoc(doc(db, 'users', user.id), user);
+  } catch (err) {
+    console.warn('saveUserToFirebase fallback:', err);
+  }
+}
+
 export async function updateUserInFirebase(userId: string, partial: Partial<User>) {
   try {
     await updateDoc(doc(db, 'users', userId), partial);
   } catch (err) {
     console.warn('updateUserInFirebase fallback:', err);
+  }
+}
+
+export async function getUserFromFirebase(userId: string): Promise<User | null> {
+  try {
+    const snap = await getDoc(doc(db, 'users', userId));
+    if (snap.exists()) {
+      return snap.data() as User;
+    }
+    return null;
+  } catch (err) {
+    console.warn('getUserFromFirebase fallback:', err);
+    return null;
   }
 }

@@ -25,6 +25,7 @@ import { ShareModal } from './components/Modals/ShareModal';
 import { EditProfileModal } from './components/Modals/EditProfileModal';
 import { SchoolAdminModal } from './components/Admin/SchoolAdminModal';
 import { PlatformAdminModal } from './components/Admin/PlatformAdminModal';
+import { AuthModal } from './components/Modals/AuthModal';
 
 const AppContent: React.FC = () => {
   const { activeTab, activeModal, toast } = useApp();
@@ -91,6 +92,7 @@ const AppContent: React.FC = () => {
       {activeModal === 'edit_profile' && <EditProfileModal />}
       {activeModal === 'school_admin' && <SchoolAdminModal />}
       {activeModal === 'platform_admin' && <PlatformAdminModal />}
+      {activeModal === 'auth' && <AuthModal />}
 
       {/* Toast Notifications System */}
       {toast && (

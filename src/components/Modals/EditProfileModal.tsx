@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { X, Save, Sparkles, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Sparkles, Plus, Trash2, Camera, Upload, Loader2 } from 'lucide-react';
+import { processImageFile } from '../../lib/uploadHelper';
 
 export const EditProfileModal: React.FC = () => {
   const { currentUser, updateCurrentUserProfile, closeModal, showToast } = useApp();
 
   const [name, setName] = useState(currentUser.name);
+  const [avatar, setAvatar] = useState(currentUser.avatar);
   const [bio, setBio] = useState(currentUser.bio);
   const [classLevel, setClassLevel] = useState(currentUser.classLevel || 'Senior Grade 12');
   const [talents, setTalents] = useState<string[]>(currentUser.creatorTalents || []);
   const [newTalentInput, setNewTalentInput] = useState('');
+  const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingAvatar(true);
+    try {
+      const processed = await processImageFile(file);
+      setAvatar(processed.url);
+      showToast('Avatar photo updated!', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to process avatar image', 'error');
+    } finally {
+      setIsProcessingAvatar(false);
+      if (avatarFileRef.current) avatarFileRef.current.value = '';
+    }
+  };
 
   const handleAddTalent = () => {
     if (!newTalentInput.trim()) return;
@@ -27,6 +48,7 @@ export const EditProfileModal: React.FC = () => {
     e.preventDefault();
     updateCurrentUserProfile({
       name: name.trim(),
+      avatar: avatar.trim(),
       bio: bio.trim(),
       classLevel: classLevel.trim(),
       creatorTalents: talents
@@ -49,6 +71,49 @@ export const EditProfileModal: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+          {/* Avatar Upload */}
+          <div className="flex items-center gap-4 p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+            <div className="relative">
+              <img
+                src={avatar}
+                alt={name}
+                className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 shadow-xs"
+              />
+              <button
+                type="button"
+                onClick={() => avatarFileRef.current?.click()}
+                disabled={isProcessingAvatar}
+                className="absolute bottom-0 right-0 p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md transition-transform hover:scale-105"
+                title="Change Photo"
+              >
+                {isProcessingAvatar ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Camera className="w-3.5 h-3.5" />
+                )}
+              </button>
+              <input
+                ref={avatarFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarFile}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-neutral-800">Profile Photo</p>
+              <p className="text-[11px] text-neutral-500 mb-1">Upload a photo from your phone or device</p>
+              <button
+                type="button"
+                onClick={() => avatarFileRef.current?.click()}
+                className="px-2.5 py-1 bg-white border border-neutral-300 rounded-lg font-semibold text-neutral-700 hover:border-blue-500 flex items-center gap-1 text-[11px]"
+              >
+                <Upload className="w-3 h-3 text-blue-600" />
+                <span>Upload New Avatar</span>
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="font-bold text-neutral-700 block mb-1">Full Name</label>
             <input

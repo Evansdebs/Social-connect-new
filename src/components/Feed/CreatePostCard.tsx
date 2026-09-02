@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   Image,
@@ -9,8 +9,11 @@ import {
   Download,
   Send,
   Loader2,
-  X
+  X,
+  Upload,
+  Camera
 } from 'lucide-react';
+import { processImageFile, CURATED_CAMPUS_MEDIA } from '../../lib/uploadHelper';
 
 export const CreatePostCard: React.FC = () => {
   const { currentUser, createPost, openModal, showToast } = useApp();
@@ -18,7 +21,28 @@ export const CreatePostCard: React.FC = () => {
   const [mediaUrl, setMediaUrl] = useState('');
   const [allowDownloads, setAllowDownloads] = useState(true);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isProcessingMedia, setIsProcessingMedia] = useState(false);
   const [showMediaInput, setShowMediaInput] = useState(false);
+  const [showCuratedPicker, setShowCuratedPicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingMedia(true);
+    try {
+      const processed = await processImageFile(file);
+      setMediaUrl(processed.url);
+      setShowMediaInput(true);
+      showToast('Photo prepared for posting!', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to process image file', 'error');
+    } finally {
+      setIsProcessingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handlePublish = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +73,7 @@ export const CreatePostCard: React.FC = () => {
     setText('');
     setMediaUrl('');
     setShowMediaInput(false);
+    setShowCuratedPicker(false);
   };
 
   // Call Server-side AI Caption Generator
@@ -95,33 +120,101 @@ export const CreatePostCard: React.FC = () => {
             className="w-full resize-none text-sm text-neutral-900 placeholder-neutral-400 outline-none bg-transparent"
           />
 
-          {/* Optional Media URL preview / input */}
+          {/* Optional Media URL preview / input / curated */}
           {showMediaInput && (
-            <div className="mt-2 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200">
-              <div className="flex items-center justify-between text-xs text-neutral-500 mb-1">
-                <span className="font-semibold">Photo/Image Web Link</span>
+            <div className="mt-2 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200 animate-in fade-in">
+              <div className="flex items-center justify-between text-xs text-neutral-500 mb-2">
+                <span className="font-semibold text-neutral-700">Attach Media (Device File or Web URL)</span>
                 <button
                   type="button"
                   onClick={() => {
                     setShowMediaInput(false);
                     setMediaUrl('');
+                    setShowCuratedPicker(false);
                   }}
-                  className="text-neutral-400 hover:text-neutral-600"
+                  className="text-neutral-400 hover:text-neutral-600 p-0.5"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
+
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessingMedia}
+                  className="px-3 py-1.5 bg-white border border-neutral-300 hover:border-blue-500 rounded-lg text-xs font-semibold text-neutral-700 flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  {isProcessingMedia ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5 text-blue-600" />
+                  )}
+                  <span>Upload Device Photo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCuratedPicker(!showCuratedPicker)}
+                  className="px-3 py-1.5 bg-white border border-neutral-300 hover:border-indigo-500 rounded-lg text-xs font-semibold text-neutral-700 flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Curated Campus Photos</span>
+                </button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+
+              {showCuratedPicker && (
+                <div className="mb-2 p-2 bg-white rounded-lg border border-neutral-200">
+                  <p className="text-[11px] font-semibold text-neutral-500 mb-1.5">Select high-quality campus photo:</p>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                    {CURATED_CAMPUS_MEDIA.images.map((img, idx) => (
+                      <button
+                        type="button"
+                        key={idx}
+                        onClick={() => {
+                          setMediaUrl(img.url);
+                          setShowCuratedPicker(false);
+                        }}
+                        className="group relative rounded-md overflow-hidden aspect-video border border-neutral-200 hover:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-all"
+                      >
+                        <img src={img.url} alt={img.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] truncate px-1 py-0.5 text-center">
+                          {img.title}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <input
                 id="post-media-url-input"
                 type="text"
                 value={mediaUrl}
                 onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="Paste image URL (e.g., Unsplash or school CDN link)..."
+                placeholder="Or paste an image web URL..."
                 className="w-full text-xs bg-white px-3 py-1.5 rounded-lg border border-neutral-200 outline-none focus:border-blue-500"
               />
+
               {mediaUrl && (
-                <div className="mt-2 relative rounded-lg overflow-hidden max-h-48 border border-neutral-200">
-                  <img src={mediaUrl} alt="Preview" className="w-full h-auto object-cover" />
+                <div className="mt-2 relative rounded-lg overflow-hidden max-h-56 border border-neutral-200 bg-black/5">
+                  <img src={mediaUrl} alt="Preview" className="w-full h-auto max-h-56 object-contain" />
+                  <button
+                    type="button"
+                    onClick={() => setMediaUrl('')}
+                    className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors"
+                    title="Remove Photo"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
             </div>

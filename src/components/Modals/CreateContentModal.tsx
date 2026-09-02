@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import {
   X,
@@ -11,8 +11,11 @@ import {
   Plus,
   Trash2,
   Send,
-  Loader2
+  Loader2,
+  Upload,
+  Camera
 } from 'lucide-react';
+import { processImageFile, validateVideoFile, CURATED_CAMPUS_MEDIA } from '../../lib/uploadHelper';
 
 export const CreateContentModal: React.FC = () => {
   const {
@@ -45,6 +48,32 @@ export const CreateContentModal: React.FC = () => {
   const [mediaUrl, setMediaUrl] = useState('');
   const [allowDownloads, setAllowDownloads] = useState(true);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isProcessingMedia, setIsProcessingMedia] = useState(false);
+  const [showCuratedPicker, setShowCuratedPicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDeviceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingMedia(true);
+    try {
+      if (creationType === 'reel') {
+        const validated = await validateVideoFile(file);
+        setMediaUrl(validated.url);
+        showToast(`Video loaded (${(validated.sizeMb).toFixed(1)}MB)`, 'success');
+      } else {
+        const processed = await processImageFile(file);
+        setMediaUrl(processed.url);
+        showToast('Photo compressed & ready!', 'success');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Failed to upload media', 'error');
+    } finally {
+      setIsProcessingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // Poll states
   const [pollQuestion, setPollQuestion] = useState('');
@@ -243,26 +272,114 @@ export const CreateContentModal: React.FC = () => {
             />
           </div>
 
-          {/* Media URL Input (if post, reel, or story) */}
+          {/* Media Input (if post, reel, or story) */}
           {(creationType === 'post' || creationType === 'reel' || creationType === 'story') && (
-            <div>
-              <label className="text-xs font-bold text-neutral-700 block mb-1">
-                {creationType === 'reel' ? 'Video URL' : 'Image / Photo URL'}
-              </label>
+            <div className="p-3 bg-neutral-50 rounded-2xl border border-neutral-200">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-neutral-800">
+                  {creationType === 'reel' ? 'Reel Video Source' : 'Photo / Visual Media'}
+                </label>
+                {mediaUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setMediaUrl('')}
+                    className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold"
+                  >
+                    Remove Media
+                  </button>
+                )}
+              </div>
+
+              {/* Action buttons: Upload device file vs Curated library */}
+              <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessingMedia}
+                  className="px-3 py-1.5 bg-white border border-neutral-300 hover:border-blue-500 rounded-xl text-xs font-semibold text-neutral-700 flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  {isProcessingMedia ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5 text-blue-600" />
+                  )}
+                  <span>Upload from Device ({creationType === 'reel' ? 'Video' : 'Photo'})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCuratedPicker(!showCuratedPicker)}
+                  className="px-3 py-1.5 bg-white border border-neutral-300 hover:border-indigo-500 rounded-xl text-xs font-semibold text-neutral-700 flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Curated Campus Library</span>
+                </button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={creationType === 'reel' ? 'video/mp4,video/webm,video/quicktime' : 'image/*'}
+                className="hidden"
+                onChange={handleDeviceUpload}
+              />
+
+              {/* Curated Media Shelf */}
+              {showCuratedPicker && (
+                <div className="mb-2.5 p-2 bg-white rounded-xl border border-neutral-200">
+                  <p className="text-[11px] font-semibold text-neutral-500 mb-1.5">
+                    {creationType === 'reel' ? 'Select trending campus video clip:' : 'Select campus photo:'}
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {(creationType === 'reel' ? CURATED_CAMPUS_MEDIA.videos : CURATED_CAMPUS_MEDIA.images).map((item, idx) => (
+                      <button
+                        type="button"
+                        key={idx}
+                        onClick={() => {
+                          setMediaUrl(item.url);
+                          setShowCuratedPicker(false);
+                        }}
+                        className="group relative rounded-lg overflow-hidden aspect-video border border-neutral-200 hover:border-blue-500 transition-all text-left"
+                      >
+                        {creationType === 'reel' ? (
+                          <div className="w-full h-full bg-neutral-900 flex items-center justify-center text-white text-[10px] font-bold p-2 text-center">
+                            🎬 {item.title}
+                          </div>
+                        ) : (
+                          <img src={item.url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        )}
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] truncate px-1 py-0.5 text-center">
+                          {item.title}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Direct URL Input fallback */}
               <input
                 type="text"
                 value={mediaUrl}
                 onChange={(e) => setMediaUrl(e.target.value)}
                 placeholder={
                   creationType === 'reel'
-                    ? 'https://... (mp4 video or test sample)'
-                    : 'https://images.unsplash.com/... (image link)'
+                    ? 'Or paste MP4 / WebM video link...'
+                    : 'Or paste image link (e.g. Unsplash, CDN)...'
                 }
-                className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-blue-500"
+                className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-neutral-200 outline-none focus:border-blue-500"
               />
-              <p className="text-[10px] text-neutral-400 mt-1">
-                Tip: Leave blank to use authentic student demonstration clips.
-              </p>
+
+              {/* Media Preview Box */}
+              {mediaUrl && (
+                <div className="mt-2.5 rounded-xl overflow-hidden border border-neutral-200 bg-black/5 max-h-48 flex items-center justify-center relative">
+                  {creationType === 'reel' ? (
+                    <video src={mediaUrl} controls className="max-h-48 w-full object-contain" />
+                  ) : (
+                    <img src={mediaUrl} alt="Preview" className="max-h-48 w-full object-contain" />
+                  )}
+                </div>
+              )}
             </div>
           )}
 

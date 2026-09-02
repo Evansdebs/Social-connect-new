@@ -1,0 +1,451 @@
+import React, { useState } from 'react';
+import { useApp } from '../../context/AppContext';
+import {
+  X,
+  Lock,
+  Mail,
+  User as UserIcon,
+  GraduationCap,
+  Building2,
+  Shield,
+  Sparkles,
+  ArrowRight,
+  Loader2,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
+import { auth } from '../../lib/firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  updateProfile
+} from 'firebase/auth';
+import { saveUserToFirebase, getUserFromFirebase } from '../../lib/firestoreService';
+import { User, UserRole } from '../../types';
+
+export const AuthModal: React.FC = () => {
+  const {
+    closeModal,
+    showToast,
+    schools,
+    users,
+    switchUser,
+    setAuthUser
+  } = useApp();
+
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [role, setRole] = useState<UserRole>('student');
+  const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || 'school-1');
+  const [classLevel, setClassLevel] = useState('Senior Secondary (Year 12)');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const selectedSchool = schools.find((s) => s.id === selectedSchoolId) || schools[0];
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setLoading(true);
+
+    try {
+      if (mode === 'signin') {
+        const userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const fbUser = userCred.user;
+
+        // Try to fetch existing user profile from Firestore
+        let userProfile = await getUserFromFirebase(fbUser.uid);
+        if (!userProfile) {
+          // If no profile exists yet, create one
+          userProfile = {
+            id: fbUser.uid,
+            name: fbUser.displayName || email.split('@')[0],
+            username: (fbUser.displayName || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            email: fbUser.email || email,
+            role: 'student',
+            avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
+            coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+            bio: 'Student at Campus Connect',
+            schoolId: selectedSchool.id,
+            schoolName: selectedSchool.name,
+            classLevel: 'Senior Year',
+            interests: ['Academics', 'Campus Life'],
+            creatorTalents: [],
+            badges: ['Verified Student'],
+            followersCount: 0,
+            followingCount: 0,
+            connectionsCount: 0,
+            isVerified: false,
+            isPrivate: false,
+            allowDownloads: true,
+            whoCanMessage: 'everyone',
+            whoCanConnect: 'everyone'
+          };
+          await saveUserToFirebase(userProfile);
+        }
+
+        setAuthUser(userProfile);
+        showToast(`Welcome back, ${userProfile.name}!`, 'success');
+        closeModal();
+      } else {
+        // Sign Up
+        if (!name.trim()) {
+          setErrorMsg('Please enter your full name');
+          setLoading(false);
+          return;
+        }
+
+        const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const fbUser = userCred.user;
+
+        await updateProfile(fbUser, {
+          displayName: name.trim()
+        });
+
+        const newProfile: User = {
+          id: fbUser.uid,
+          name: name.trim(),
+          username: (username.trim() || name.trim().toLowerCase().replace(/\s+/g, '_')).replace('@', ''),
+          email: fbUser.email || email.trim(),
+          role: role,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
+          coverImage: selectedSchool.coverImage || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+          bio: `${role === 'student' ? 'Student' : role === 'teacher' ? 'Faculty Teacher' : 'Campus Administrator'} at ${selectedSchool.name}. Passionate about learning and collaboration!`,
+          schoolId: selectedSchool.id,
+          schoolName: selectedSchool.name,
+          classLevel: classLevel.trim(),
+          interests: ['Academics', 'Campus Life', 'Leadership'],
+          creatorTalents: ['Student Leadership'],
+          badges: ['New Member', selectedSchool.name],
+          followersCount: 0,
+          followingCount: 0,
+          connectionsCount: 0,
+          isVerified: role === 'school_admin' || role === 'teacher',
+          isPrivate: false,
+          allowDownloads: true,
+          whoCanMessage: 'everyone',
+          whoCanConnect: 'everyone'
+        };
+
+        await saveUserToFirebase(newProfile);
+        setAuthUser(newProfile);
+        showToast(`Account created for ${newProfile.name}!`, 'success');
+        closeModal();
+      }
+    } catch (err: any) {
+      console.error('Firebase Auth error:', err);
+      let message = err.message || 'Authentication failed';
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        message = 'Invalid email or password.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        message = 'An account with this email already exists. Try signing in.';
+      } else if (err.code === 'auth/weak-password') {
+        message = 'Password should be at least 6 characters.';
+      } else if (err.code === 'auth/invalid-email') {
+        message = 'Please enter a valid email address.';
+      }
+      setErrorMsg(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMsg(null);
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const fbUser = result.user;
+
+      let userProfile = await getUserFromFirebase(fbUser.uid);
+      if (!userProfile) {
+        userProfile = {
+          id: fbUser.uid,
+          name: fbUser.displayName || 'Campus Member',
+          username: (fbUser.displayName || 'student').toLowerCase().replace(/[^a-z0-9]/g, '_'),
+          email: fbUser.email || '',
+          role: 'student',
+          avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
+          coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+          bio: 'Campus Connect student member',
+          schoolId: selectedSchool.id,
+          schoolName: selectedSchool.name,
+          classLevel: 'Year 12',
+          interests: ['Campus Life', 'Tech'],
+          creatorTalents: [],
+          badges: ['Google Verified'],
+          followersCount: 0,
+          followingCount: 0,
+          connectionsCount: 0,
+          isVerified: true,
+          isPrivate: false,
+          allowDownloads: true,
+          whoCanMessage: 'everyone',
+          whoCanConnect: 'everyone'
+        };
+        await saveUserToFirebase(userProfile);
+      }
+
+      setAuthUser(userProfile);
+      showToast(`Signed in with Google as ${userProfile.name}!`, 'success');
+      closeModal();
+    } catch (err: any) {
+      console.warn('Google sign-in exception:', err);
+      setErrorMsg(err.message || 'Google sign-in could not be completed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-200">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 p-6 text-white relative">
+          <button
+            onClick={closeModal}
+            className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2 mb-2">
+            <GraduationCap className="w-6 h-6 text-blue-200" />
+            <span className="text-xs font-black uppercase tracking-widest text-blue-200">
+              Campus Connect Production
+            </span>
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">
+            {mode === 'signin' ? 'Sign In to Campus Connect' : 'Create Student / Faculty Account'}
+          </h2>
+          <p className="text-xs text-blue-100 mt-1">
+            Real Firebase Authentication & Cloud Database live synchronization
+          </p>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex border-b border-neutral-200 bg-neutral-50 px-6 pt-3">
+          <button
+            onClick={() => {
+              setMode('signin');
+              setErrorMsg(null);
+            }}
+            className={`pb-3 text-xs font-bold transition-colors border-b-2 mr-6 ${
+              mode === 'signin'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-neutral-500 hover:text-neutral-800'
+            }`}
+          >
+            Sign In with Email
+          </button>
+          <button
+            onClick={() => {
+              setMode('signup');
+              setErrorMsg(null);
+            }}
+            className={`pb-3 text-xs font-bold transition-colors border-b-2 ${
+              mode === 'signup'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-neutral-500 hover:text-neutral-800'
+            }`}
+          >
+            Register New Account
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          {errorMsg && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Google Sign-In Button */}
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full py-2.5 px-4 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 active:bg-neutral-100 flex items-center justify-center gap-2.5 transition-colors shadow-2xs"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+            <span>Continue with Google Account</span>
+          </button>
+
+          <div className="flex items-center gap-3 my-2">
+            <div className="flex-1 h-px bg-neutral-200" />
+            <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+              Or with Email
+            </span>
+            <div className="flex-1 h-px bg-neutral-200" />
+          </div>
+
+          <form onSubmit={handleEmailAuth} className="space-y-3.5 text-xs">
+            {mode === 'signup' && (
+              <>
+                <div>
+                  <label className="font-bold text-neutral-700 block mb-1">Full Legal Name</label>
+                  <div className="relative">
+                    <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g., Kofi Mensah"
+                      className="w-full pl-9 pr-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-neutral-700 block mb-1">Campus Role</label>
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as UserRole)}
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500"
+                    >
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher / Faculty</option>
+                      <option value="school_admin">School Admin</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-neutral-700 block mb-1">Campus School</label>
+                    <select
+                      value={selectedSchoolId}
+                      onChange={(e) => setSelectedSchoolId(e.target.value)}
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500 truncate"
+                    >
+                      {schools.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-neutral-700 block mb-1">Grade / Level</label>
+                  <input
+                    type="text"
+                    value={classLevel}
+                    onChange={(e) => setClassLevel(e.target.value)}
+                    placeholder="e.g., Senior Secondary 3 / Year 12"
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500"
+                  />
+                </div>
+              </>
+            )}
+
+            <div>
+              <label className="font-bold text-neutral-700 block mb-1">Email Address</label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="student@school.edu.gh or name@gmail.com"
+                  className="w-full pl-9 pr-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="font-bold text-neutral-700 block mb-1">Password</label>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="•••••••• (at least 6 characters)"
+                  className="w-full pl-9 pr-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Connecting to Firebase Auth...</span>
+                </>
+              ) : (
+                <>
+                  <span>{mode === 'signin' ? 'Sign In Securely' : 'Complete Registration'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Instant Test Personas */}
+          <div className="pt-3 border-t border-neutral-100">
+            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">
+              Or Fast-Switch Demo Persona
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {users.slice(0, 4).map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => {
+                    switchUser(u.id);
+                    closeModal();
+                  }}
+                  className="p-2 border border-neutral-200 hover:border-blue-300 hover:bg-blue-50/50 rounded-xl text-left flex items-center gap-2 transition-colors"
+                >
+                  <img
+                    src={u.avatar}
+                    alt={u.name}
+                    className="w-7 h-7 rounded-full object-cover shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-bold text-[11px] text-neutral-900 truncate">{u.name}</p>
+                    <p className="text-[10px] text-neutral-500 truncate capitalize">
+                      {u.role.replace('_', ' ')}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
