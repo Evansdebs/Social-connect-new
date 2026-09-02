@@ -17,6 +17,8 @@ import { CommunitiesView } from './components/Communities/CommunitiesView';
 import { ChatView } from './components/Chat/ChatView';
 import { EventsAndOpportunitiesView } from './components/Events/EventsAndOpportunitiesView';
 import { ProfileView } from './components/Profile/ProfileView';
+import { LoginView } from './components/Auth/LoginView';
+import { GraduationCap } from 'lucide-react';
 
 // Modals
 import { CreateContentModal } from './components/Modals/CreateContentModal';
@@ -28,9 +30,47 @@ import { PlatformAdminModal } from './components/Admin/PlatformAdminModal';
 import { AuthModal } from './components/Modals/AuthModal';
 
 const AppContent: React.FC = () => {
-  const { activeTab, activeModal, toast } = useApp();
+  const { isAuthenticated, isAuthChecking, activeTab, activeModal, toast } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
+  // 1. Initial authentication status check
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-xl shadow-blue-500/25 mb-4 animate-pulse">
+          <GraduationCap className="w-8 h-8 text-white" />
+        </div>
+        <p className="font-black text-lg tracking-tight text-white">Campus Connect</p>
+        <p className="text-xs text-slate-400 mt-1">Verifying campus credentials...</p>
+      </div>
+    );
+  }
+
+  // 2. Before users can view the main page or any content, they must first login
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginView />
+        {toast && (
+          <div className="fixed bottom-6 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+            <div
+              className={`pointer-events-auto px-4 py-2.5 rounded-2xl shadow-lg border text-xs font-bold flex items-center gap-2 animate-in slide-in-from-bottom-2 fade-in ${
+                toast.type === 'success'
+                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/20'
+                  : toast.type === 'error'
+                  ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20'
+                  : 'bg-neutral-900 text-white border-neutral-800 shadow-neutral-900/20'
+              }`}
+            >
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // 3. Authenticated user viewing the main page and content
   return (
     <div className="min-h-screen bg-neutral-100/70 text-neutral-900 flex flex-col font-sans antialiased">
       {/* Top Fixed Header Navbar */}

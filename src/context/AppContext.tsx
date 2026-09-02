@@ -94,6 +94,8 @@ interface AppContextType {
   users: User[];
   isFirebaseAuthActive: boolean;
   firebaseUserEmail: string | null;
+  isAuthenticated: boolean;
+  isAuthChecking: boolean;
   setAuthUser: (user: User) => void;
   signOutUser: () => Promise<void>;
   switchUser: (userId: string) => void;
@@ -291,6 +293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Real Firebase Authentication status
   const [isFirebaseAuthActive, setIsFirebaseAuthActive] = useState<boolean>(false);
   const [firebaseUserEmail, setFirebaseUserEmail] = useState<string | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
 
   // Sync to local storage
   useEffect(() => {
@@ -363,8 +366,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Firestore & Firebase Auth real-time sync
   useEffect(() => {
+    let safetyTimer = setTimeout(() => {
+      setIsAuthChecking(false);
+    }, 1200);
+
     // Listen for Firebase Auth user
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
+      clearTimeout(safetyTimer);
       if (fbUser) {
         setIsFirebaseAuthActive(true);
         setFirebaseUserEmail(fbUser.email);
@@ -381,6 +389,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               return [profile, ...prev];
             });
             setCurrentUserId(profile.id);
+            if (profile.schoolId) {
+              setSelectedSchoolId(profile.schoolId);
+            }
+          } else {
+            // If user authenticated but profile not yet in Firestore (e.g. fresh Google Sign-in)
+            const fallbackProfile: User = {
+              id: fbUser.uid,
+              name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Campus Member',
+              username: (fbUser.displayName || fbUser.email?.split('@')[0] || 'member').toLowerCase().replace(/[^a-z0-9]/g, '_'),
+              email: fbUser.email || '',
+              role: 'student',
+              avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
+              coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+              bio: 'Campus Connect student member',
+              schoolId: '',
+              schoolName: 'Campus Connect',
+              classLevel: 'Student',
+              interests: ['Academics', 'Campus Life'],
+              creatorTalents: [],
+              badges: ['Verified Student'],
+              followersCount: 0,
+              followingCount: 0,
+              connectionsCount: 0,
+              isVerified: true,
+              isPrivate: false,
+              allowDownloads: true,
+              whoCanMessage: 'everyone',
+              whoCanConnect: 'everyone'
+            };
+            setUsers((prev) => [fallbackProfile, ...prev.filter((u) => u.id !== fallbackProfile.id)]);
+            setCurrentUserId(fallbackProfile.id);
+            saveUserToFirebase(fallbackProfile).catch(() => {});
           }
         } catch (err) {
           console.warn('Firebase user sync note:', err);
@@ -388,7 +428,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } else {
         setIsFirebaseAuthActive(false);
         setFirebaseUserEmail(null);
+        setCurrentUserId('');
+        localStorage.removeItem('cc_current_user_id');
       }
+      setIsAuthChecking(false);
     });
 
     // Real-time live posts stream
@@ -480,7 +523,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const currentUser: User =
-    users.find((u) => u.id === currentUserId) || users[0] || DEFAULT_GUEST_USER;
+    users.find((u) => u.id === currentUserId) || DEFAULT_GUEST_USER;
+
+  const isAuthenticated: boolean = Boolean(
+    isFirebaseAuthActive &&
+    currentUserId &&
+    currentUserId !== 'guest' &&
+    currentUser &&
+    currentUser.id !== 'guest'
+  );
 
   const setAuthUser = (user: User) => {
     setUsers((prev) => {
@@ -493,21 +544,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [user, ...prev];
     });
     setCurrentUserId(user.id);
+    localStorage.setItem('cc_current_user_id', user.id);
     if (user.schoolId) setSelectedSchoolId(user.schoolId);
     setIsFirebaseAuthActive(true);
     setFirebaseUserEmail(user.email);
+    setIsAuthChecking(false);
   };
 
   const signOutUser = async () => {
     try {
       await signOut(auth);
-      setIsFirebaseAuthActive(false);
-      setFirebaseUserEmail(null);
-      setCurrentUserId('');
-      showToast('Signed out of your account.', 'info');
     } catch (err: any) {
-      showToast('Sign out issue: ' + err.message, 'error');
+      console.warn('Sign out issue:', err);
     }
+    setIsFirebaseAuthActive(false);
+    setFirebaseUserEmail(null);
+    setCurrentUserId('');
+    localStorage.removeItem('cc_current_user_id');
+    showToast('Signed out of your campus account.', 'info');
   };
 
   const switchUser = (userId: string) => {
@@ -996,6 +1050,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         users,
         isFirebaseAuthActive,
         firebaseUserEmail,
+        isAuthenticated,
+        isAuthChecking,
         setAuthUser,
         signOutUser,
         switchUser,
