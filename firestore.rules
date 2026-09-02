@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // In this campus community app, authenticated users or demo visitors can read posts, schools, clubs, etc.
+    // Public readable collections with write validation
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /schools/{schoolId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /stories/{storyId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /reels/{reelId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /clubs/{clubId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /challenges/{challengeId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /opportunities/{oppId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /conversations/{convId} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if true;
+    }
+  }
+}

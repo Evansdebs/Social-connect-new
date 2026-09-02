@@ -46,7 +46,20 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
   const joinedClubs = clubs.filter((c) => c.isJoined);
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col gap-5 py-4 select-none">
+    <aside className="w-full md:w-64 shrink-0 flex flex-col gap-4 select-none">
+      {/* Mobile Drawer Header with Close Button */}
+      {onCloseMobileMenu && (
+        <div className="md:hidden flex items-center justify-between pb-2 border-b border-neutral-200">
+          <span className="font-bold text-sm text-neutral-800">Campus Navigation</span>
+          <button
+            onClick={onCloseMobileMenu}
+            className="text-xs font-semibold text-neutral-500 hover:text-neutral-800 bg-neutral-100 px-2 py-1 rounded-md"
+          >
+            Close
+          </button>
+        </div>
+      )}
+
       {/* Primary Navigation Menu */}
       <nav className="bg-white rounded-2xl border border-neutral-200/80 p-2 shadow-xs space-y-1">
         {navItems.map((item) => {

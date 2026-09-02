@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CampusConnectDatabaseSchema",
+  "entities": {
+    "posts": {
+      "fields": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorUsername": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "authorSchool": { "type": "string" },
+        "authorSchoolId": { "type": "string" },
+        "authorRole": { "type": "string" },
+        "content": { "type": "string" },
+        "mediaUrl": { "type": "string", "optional": true },
+        "mediaType": { "type": "string", "optional": true },
+        "allowDownload": { "type": "boolean" },
+        "tags": { "type": "array" },
+        "scope": { "type": "string" },
+        "isOfficialAnnouncement": { "type": "boolean" },
+        "poll": { "type": "object", "optional": true },
+        "repostOf": { "type": "object", "optional": true },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "sharesCount": { "type": "number" },
+        "repostsCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "timestamp": { "type": "number", "optional": true }
+      }
+    },
+    "comments": {
+      "fields": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "authorSchool": { "type": "string" },
+        "content": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "replies": { "type": "array", "optional": true },
+        "timestamp": { "type": "number", "optional": true }
+      }
+    },
+    "users": {
+      "fields": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "avatar": { "type": "string" },
+        "coverImage": { "type": "string", "optional": true },
+        "bio": { "type": "string" },
+        "role": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "schoolName": { "type": "string" },
+        "classLevel": { "type": "string", "optional": true },
+        "interests": { "type": "array" },
+        "creatorTalents": { "type": "array", "optional": true },
+        "badges": { "type": "array" },
+        "followersCount": { "type": "number" },
+        "followingCount": { "type": "number" },
+        "connectionsCount": { "type": "number" },
+        "isVerified": { "type": "boolean" }
+      }
+    },
+    "schools": {
+      "fields": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "shortCode": { "type": "string" },
+        "motto": { "type": "string" },
+        "crest": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "studentCount": { "type": "number" },
+        "established": { "type": "string" },
+        "location": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "trophies": { "type": "number" },
+        "rank": { "type": "number" },
+        "score": { "type": "number" }
+      }
+    },
+    "stories": {
+      "fields": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorUsername": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "authorSchool": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "caption": { "type": "string", "optional": true },
+        "createdAt": { "type": "string" },
+        "viewed": { "type": "boolean" },
+        "timestamp": { "type": "number", "optional": true }
+      }
+    },
+    "reels": {
+      "fields": {
+        "id": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorUsername": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "authorSchool": { "type": "string" },
+        "description": { "type": "string" },
+        "soundTrack": { "type": "string" },
+        "hashtags": { "type": "array" },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "sharesCount": { "type": "number" },
+        "downloadsCount": { "type": "number" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "clubs": {
+      "fields": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "icon": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "schoolId": { "type": "string" },
+        "schoolName": { "type": "string" },
+        "isOfficial": { "type": "boolean" },
+        "facultyPatron": { "type": "string", "optional": true },
+        "membersCount": { "type": "number" },
+        "isJoined": { "type": "boolean" }
+      }
+    },
+    "challenges": {
+      "fields": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "deadline": { "type": "string" },
+        "schoolA": { "type": "object" },
+        "schoolB": { "type": "object" },
+        "status": { "type": "string" },
+        "prize": { "type": "string" }
+      }
+    },
+    "events": {
+      "fields": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "venue": { "type": "string" },
+        "category": { "type": "string" },
+        "organizerSchool": { "type": "string" },
+        "description": { "type": "string" },
+        "bannerImage": { "type": "string" },
+        "interestedCount": { "type": "number" },
+        "goingCount": { "type": "number" }
+      }
+    },
+    "opportunities": {
+      "fields": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "category": { "type": "string" },
+        "deadline": { "type": "string" },
+        "description": { "type": "string" },
+        "eligibility": { "type": "string" },
+        "isSaved": { "type": "boolean" },
+        "link": { "type": "string" }
+      }
+    },
+    "conversations": {
+      "fields": {
+        "id": { "type": "string" },
+        "participant": { "type": "object" },
+        "messages": { "type": "array" },
+        "unreadCount": { "type": "number" },
+        "updatedAt": { "type": "number", "optional": true }
+      }
+    },
+    "notifications": {
+      "fields": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "actorName": { "type": "string" },
+        "actorAvatar": { "type": "string" },
+        "actorSchool": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" }
+      }
+    },
+    "reports": {
+      "fields": {
+        "id": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "reason": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    }
+  }
+}

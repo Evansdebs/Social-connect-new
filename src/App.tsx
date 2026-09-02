@@ -28,19 +28,40 @@ import { PlatformAdminModal } from './components/Admin/PlatformAdminModal';
 
 const AppContent: React.FC = () => {
   const { activeTab, activeModal, toast } = useApp();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-neutral-100/70 text-neutral-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-neutral-100/70 text-neutral-900 flex flex-col font-sans antialiased">
       {/* Top Fixed Header Navbar */}
-      <Navbar />
+      <Navbar
+        isMobileMenuOpen={isMobileMenuOpen}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      />
+
+      {/* Mobile Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 md:hidden backdrop-blur-xs transition-opacity animate-in fade-in"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div
+            className="w-72 max-w-[85vw] h-full bg-white shadow-2xl p-4 overflow-y-auto animate-in slide-in-from-left duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Sidebar onCloseMobileMenu={() => setIsMobileMenuOpen(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Main Responsive Grid Layout */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 lg:px-6 pt-4 pb-20 md:pb-6 flex gap-5">
-        {/* Left Primary Navigation Sidebar */}
-        <Sidebar />
+      <div className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 lg:px-6 pt-3 sm:pt-4 pb-24 md:pb-6 flex gap-4 lg:gap-6">
+        {/* Left Primary Navigation Sidebar (Desktop) */}
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
 
         {/* Center Dynamic Content View */}
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 max-w-full">
           {(activeTab === 'home' || activeTab === 'feed') && <Feed />}
           {activeTab === 'reels' && <ReelsViewer />}
           {activeTab === 'discover' && <DiscoverView />}
@@ -51,7 +72,7 @@ const AppContent: React.FC = () => {
           {activeTab === 'profile' && <ProfileView />}
         </main>
 
-        {/* Right Info & Widgets Sidebar (Visible on desktop) */}
+        {/* Right Info & Widgets Sidebar (Visible on large desktop) */}
         {activeTab !== 'chat' && activeTab !== 'reels' && <RightSidebar />}
       </div>
 

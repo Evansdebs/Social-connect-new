@@ -11,7 +11,8 @@ import {
   Phone,
   Video,
   MoreVertical,
-  X
+  X,
+  ArrowLeft
 } from 'lucide-react';
 
 export const ChatView: React.FC = () => {
@@ -28,6 +29,7 @@ export const ChatView: React.FC = () => {
   const [chatSearch, setChatSearch] = useState('');
   const [mediaAttachment, setMediaAttachment] = useState('');
   const [showMediaInput, setShowMediaInput] = useState(false);
+  const [showMobileChatPane, setShowMobileChatPane] = useState(false);
 
   const activeConv =
     conversations.find((c) => c.id === activeConversationId) || conversations[0];
@@ -36,6 +38,11 @@ export const ChatView: React.FC = () => {
     c.participant.name.toLowerCase().includes(chatSearch.toLowerCase()) ||
     c.participant.school.toLowerCase().includes(chatSearch.toLowerCase())
   );
+
+  const handleSelectConv = (convId: string) => {
+    setActiveConversationId(convId);
+    setShowMobileChatPane(true);
+  };
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +58,7 @@ export const ChatView: React.FC = () => {
   return (
     <div className="bg-white rounded-3xl border border-neutral-200/80 shadow-xs overflow-hidden h-[calc(100vh-140px)] min-h-[550px] flex">
       {/* Left Conversations Sidebar */}
-      <div className="w-full sm:w-80 border-r border-neutral-200 flex flex-col shrink-0">
+      <div className={`w-full sm:w-80 border-r border-neutral-200 flex flex-col shrink-0 ${showMobileChatPane ? 'hidden sm:flex' : 'flex'}`}>
         <div className="p-3.5 border-b border-neutral-200 space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="font-black text-base text-neutral-900 tracking-tight">Direct Chats</h2>
@@ -79,7 +86,7 @@ export const ChatView: React.FC = () => {
             return (
               <div
                 key={conv.id}
-                onClick={() => setActiveConversationId(conv.id)}
+                onClick={() => handleSelectConv(conv.id)}
                 className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors ${
                   isActive ? 'bg-blue-50/70' : 'hover:bg-neutral-50'
                 }`}
@@ -123,25 +130,35 @@ export const ChatView: React.FC = () => {
 
       {/* Right Chat Window */}
       {activeConv ? (
-        <div className="hidden sm:flex flex-1 flex-col h-full bg-neutral-50/40">
+        <div className={`flex-1 flex flex-col h-full bg-neutral-50/40 ${showMobileChatPane ? 'flex' : 'hidden sm:flex'}`}>
           {/* Chat Header */}
-          <div className="p-3.5 px-5 bg-white border-b border-neutral-200 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="p-3.5 px-4 sm:px-5 bg-white border-b border-neutral-200 flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Mobile Back to Chat List Button */}
+              <button
+                type="button"
+                onClick={() => setShowMobileChatPane(false)}
+                className="sm:hidden p-1.5 -ml-1 text-neutral-600 hover:bg-neutral-100 rounded-full"
+                aria-label="Back to conversations list"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
               <div className="relative">
                 <img
                   src={activeConv.participant.avatar}
                   alt={activeConv.participant.name}
-                  className="w-10 h-10 rounded-full object-cover border border-neutral-200"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-neutral-200"
                 />
                 {activeConv.participant.isOnline && (
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />
                 )}
               </div>
-              <div>
-                <h3 className="font-extrabold text-sm text-neutral-900">
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">
                   {activeConv.participant.name}
                 </h3>
-                <p className="text-xs text-blue-600 font-medium">
+                <p className="text-[11px] sm:text-xs text-blue-600 font-medium truncate">
                   🏫 {activeConv.participant.school} • @{activeConv.participant.username}
                 </p>
               </div>

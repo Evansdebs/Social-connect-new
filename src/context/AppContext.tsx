@@ -16,6 +16,20 @@ import {
   ReportItem
 } from '../types';
 import {
+  seedFirestoreInitialData,
+  subscribeToPosts,
+  savePostToFirebase,
+  updatePostInFirebase,
+  saveStoryToFirebase,
+  saveReelToFirebase,
+  updateReelInFirebase,
+  updateClubInFirebase,
+  updateChallengeInFirebase,
+  saveConversationToFirebase,
+  saveReportToFirebase,
+  updateUserInFirebase
+} from '../lib/firestoreService';
+import {
   INITIAL_USERS,
   INITIAL_SCHOOLS,
   INITIAL_POSTS,
@@ -292,6 +306,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('cc_connected_users', JSON.stringify(connectedUserIds));
   }, [connectedUserIds]);
 
+  // Firestore sync: seed initial data on load and subscribe to live post stream
+  useEffect(() => {
+    seedFirestoreInitialData();
+    const unsubscribe = subscribeToPosts((livePosts) => {
+      if (livePosts && livePosts.length > 0) {
+        setPosts((prev) => {
+          // Merge live posts with local reactions if any
+          const merged = livePosts.map((lp) => {
+            const existing = prev.find((p) => p.id === lp.id);
+            return existing ? { ...lp, likedByUser: existing.likedByUser, userReaction: existing.userReaction } : lp;
+          });
+          return merged;
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
     setToast({ message, type });
     setTimeout(() => {
@@ -334,6 +369,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setPosts((prev) => [newPost, ...prev]);
+    savePostToFirebase(newPost);
     showToast('Post published to Campus Connect!', 'success');
   };
 
@@ -342,12 +378,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((p) => {
         if (p.id !== postId) return p;
         const alreadyLiked = p.likedByUser;
-        return {
+        const updated = {
           ...p,
           likedByUser: !alreadyLiked,
           likesCount: alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1,
           userReaction: alreadyLiked ? undefined : reaction
         };
+        updatePostInFirebase(postId, {
+          likesCount: updated.likesCount
+        });
+        return updated;
       })
     );
   };
@@ -475,6 +515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       viewed: false
     };
     setStories((prev) => [newStory, ...prev]);
+    saveStoryToFirebase(newStory);
     showToast('Story posted (active for 24 hours)!', 'success');
   };
 
@@ -501,6 +542,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: 'Just now'
     };
     setReels((prev) => [newReel, ...prev]);
+    saveReelToFirebase(newReel);
     showToast('Reel published to Campus Connect!', 'success');
   };
 
@@ -509,10 +551,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((r) => {
         if (r.id !== reelId) return r;
         const liked = r.likedByUser;
+        const newLikes = liked ? Math.max(0, r.likesCount - 1) : r.likesCount + 1;
+        updateReelInFirebase(reelId, { likesCount: newLikes });
         return {
           ...r,
           likedByUser: !liked,
-          likesCount: liked ? Math.max(0, r.likesCount - 1) : r.likesCount + 1
+          likesCount: newLikes
         };
       })
     );

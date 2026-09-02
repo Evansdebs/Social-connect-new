@@ -345,6 +345,33 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
           </div>
         </div>
       </div>
+
+      {/* Mobile Sub-bar Search */}
+      <div className="mt-2 md:hidden">
+        <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+          <Search className="w-3.5 h-3.5 absolute left-3 text-neutral-400 pointer-events-none" />
+          <input
+            id="mobile-search-input"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => {
+              if (activeTab !== 'discover') setActiveTab('discover');
+            }}
+            placeholder="Search students, schools, clubs..."
+            className="w-full bg-neutral-100 text-xs text-neutral-900 pl-9 pr-3 py-1.5 rounded-full border border-neutral-200 outline-none focus:bg-white focus:border-blue-500"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 text-neutral-400 hover:text-neutral-600 text-xs"
+            >
+              Clear
+            </button>
+          )}
+        </form>
+      </div>
     </header>
   );
 };
