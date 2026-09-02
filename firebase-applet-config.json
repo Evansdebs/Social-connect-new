@@ -1,12 +1,12 @@
 {
-  "projectId": "onereal-tutor-qfjt2",
-  "appId": "1:228762446101:web:aca8da30fa3ebb5b73a11c",
-  "apiKey": "AIzaSyD0abOly4OAE61aKi6Tj9hInr1gShvtsbk",
-  "authDomain": "onereal-tutor-qfjt2.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-campusconnect-d397e2ab-8ad4-40ed-b479-a9a9589ca1bf",
-  "storageBucket": "onereal-tutor-qfjt2.firebasestorage.app",
-  "messagingSenderId": "228762446101",
-  "measurementId": "",
-  "oAuthClientId": "228762446101-am4m0r50pecvj9t4jlu3psnmna2tpkhd.apps.googleusercontent.com",
+  "projectId": "campusconnect-f3daf",
+  "appId": "1:605190440717:web:392fcc0dafccd998035244",
+  "apiKey": "AIzaSyBVjaGX3s1gvcF2cd_nw9pV6xCzSHcXbMk",
+  "authDomain": "campusconnect-f3daf.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "campusconnect-f3daf.firebasestorage.app",
+  "messagingSenderId": "605190440717",
+  "measurementId": "G-HQ2W9L9CT3",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }

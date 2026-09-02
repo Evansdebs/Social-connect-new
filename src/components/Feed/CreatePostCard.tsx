@@ -67,7 +67,7 @@ export const CreatePostCard: React.FC = () => {
       allowDownloads,
       tags: tags.length ? tags : ['CampusConnect', (currentUser.schoolName || 'Campus').replace(/\s+/g, '')],
       schoolId: currentUser.schoolId,
-      isOfficialAnnouncement: currentUser.role === 'school_admin'
+      isOfficialAnnouncement: false
     });
 
     setText('');

@@ -28,6 +28,8 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
     isFirebaseAuthActive,
     firebaseUserEmail,
     signOutUser,
+    isSuperAdmin,
+    isSchoolAuthorized,
     activeTab,
     setActiveTab,
     unreadNotifCount,
@@ -262,16 +264,16 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                 </span>
                 <span
                   className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                    currentUser.role === 'school_admin'
-                      ? 'bg-amber-100 text-amber-800'
-                      : currentUser.role === 'platform_admin'
-                      ? 'bg-rose-100 text-rose-800'
-                      : currentUser.role === 'teacher'
+                    currentUser.role === 'super_admin'
                       ? 'bg-purple-100 text-purple-800'
                       : 'bg-blue-100 text-blue-800'
                   }`}
                 >
-                  {currentUser.role.replace('_', ' ')}
+                  {currentUser.role === 'super_admin'
+                    ? 'SUPER ADMIN'
+                    : currentUser.userType
+                    ? `USER • ${currentUser.userType.toUpperCase()}`
+                    : 'USER'}
                 </span>
               </button>
             )}
@@ -342,7 +344,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                     <span>View My Profile</span>
                     <span className="text-neutral-400 text-[10px]">@{currentUser.username}</span>
                   </button>
-                  {currentUser.role === 'school_admin' && (
+                  {isSchoolAuthorized(currentUser.schoolId) && (
                     <button
                       onClick={() => {
                         openModal('school_admin');
@@ -351,19 +353,19 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                       className="w-full text-left px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 rounded-lg flex items-center gap-1.5"
                     >
                       <Shield className="w-3.5 h-3.5" />
-                      <span>School Admin Portal</span>
+                      <span>School Staff / Page Portal</span>
                     </button>
                   )}
-                  {currentUser.role === 'platform_admin' && (
+                  {isSuperAdmin && (
                     <button
                       onClick={() => {
-                        openModal('platform_admin');
+                        openModal('super_admin');
                         setShowUserMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 rounded-lg flex items-center gap-1.5"
+                      className="w-full text-left px-3 py-2 text-xs font-medium text-purple-700 hover:bg-purple-50 rounded-lg flex items-center gap-1.5"
                     >
                       <Shield className="w-3.5 h-3.5" />
-                      <span>Platform Moderation Portal</span>
+                      <span>Super Admin Dashboard</span>
                     </button>
                   )}
                 </div>
@@ -396,7 +398,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                           <div className="truncate text-left">
                             <p className="truncate font-medium">{u.name}</p>
                             <p className="text-[10px] text-neutral-400 truncate">
-                              {u.role.replace('_', ' ')} • {u.schoolName || 'Platform'}
+                              {u.role === 'super_admin' ? 'SUPER ADMIN' : `USER${u.userType ? ` • ${u.userType}` : ''}`} • {u.schoolName || 'Platform'}
                             </p>
                           </div>
                         </div>

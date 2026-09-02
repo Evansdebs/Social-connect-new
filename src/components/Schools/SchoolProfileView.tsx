@@ -29,7 +29,8 @@ export const SchoolProfileView: React.FC = () => {
     schoolMemories,
     currentUser,
     openModal,
-    showToast
+    showToast,
+    isSchoolAuthorized
   } = useApp();
 
   const [activeSchoolTab, setActiveSchoolTab] = useState<
@@ -317,9 +318,9 @@ export const SchoolProfileView: React.FC = () => {
                 <Share2 className="w-4 h-4" />
               </button>
 
-              {currentUser.role === 'school_admin' && (
+              {isSchoolAuthorized(activeSchool.id) && (
                 <button
-                  onClick={() => openModal('school_admin')}
+                  onClick={() => openModal('school_admin', activeSchool)}
                   className="px-3 py-2 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs"
                 >
                   <Shield className="w-3.5 h-3.5" />
@@ -404,17 +405,17 @@ export const SchoolProfileView: React.FC = () => {
       {/* Tab 1: School Feed & Announcements */}
       {activeSchoolTab === 'feed' && (
         <div className="space-y-4">
-          {currentUser.role === 'school_admin' && (
+          {isSchoolAuthorized(activeSchool.id) && (
             <div className="bg-amber-50 rounded-2xl border border-amber-200 p-3.5 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 text-amber-900 font-semibold">
                 <Shield className="w-4 h-4 text-amber-600" />
-                <span>You are managing {activeSchool.name} official announcements.</span>
+                <span>You have authorized management permissions for {activeSchool.name}.</span>
               </div>
               <button
-                onClick={() => openModal('create_post')}
+                onClick={() => openModal('school_admin', activeSchool)}
                 className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg"
               >
-                + Announcement
+                School Portal
               </button>
             </div>
           )}

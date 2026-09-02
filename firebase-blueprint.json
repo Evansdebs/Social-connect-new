@@ -53,6 +53,8 @@
         "coverImage": { "type": "string", "optional": true },
         "bio": { "type": "string" },
         "role": { "type": "string" },
+        "userType": { "type": "string", "optional": true },
+        "accountStatus": { "type": "string", "optional": true },
         "schoolId": { "type": "string" },
         "schoolName": { "type": "string" },
         "classLevel": { "type": "string", "optional": true },
@@ -207,6 +209,20 @@
         "details": { "type": "string" },
         "timestamp": { "type": "string" },
         "status": { "type": "string" }
+      }
+    },
+    "schoolStaff": {
+      "fields": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userUsername": { "type": "string" },
+        "userEmail": { "type": "string", "optional": true },
+        "schoolId": { "type": "string" },
+        "schoolName": { "type": "string" },
+        "permissions": { "type": "object" },
+        "assignedAt": { "type": "string" },
+        "assignedBy": { "type": "string", "optional": true }
       }
     }
   }

@@ -137,7 +137,7 @@ export const CreateContentModal: React.FC = () => {
         allowDownloads,
         tags: ['CampusConnect', currentUser.schoolName.replace(/\s+/g, '')],
         schoolId: currentUser.schoolId,
-        isOfficialAnnouncement: currentUser.role === 'school_admin'
+        isOfficialAnnouncement: false
       });
     } else if (creationType === 'reel') {
       createReel({

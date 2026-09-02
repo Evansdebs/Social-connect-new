@@ -123,8 +123,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 {post.authorName}
               </span>
               <span className="text-xs text-neutral-400">@{post.authorUsername}</span>
-              {post.authorRole === 'school_admin' && (
-                <span className="text-blue-600 text-xs" title="Verified School Page">✓</span>
+              {(post.isOfficialAnnouncement || post.authorRole === 'super_admin') && (
+                <span className="text-blue-600 text-xs font-bold" title="Verified Campus Page">✓</span>
               )}
             </div>
             <div className="flex items-center gap-2 text-xs text-neutral-500 flex-wrap">

@@ -1,12 +1,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // In this campus community app, authenticated users or demo visitors can read posts, schools, clubs, etc.
+    function getUserData() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+        : null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.role == 'super_admin' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
+      );
+    }
+
     // Public readable collections with write validation
     match /posts/{postId} {
       allow read: if true;
@@ -70,6 +83,11 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow read, write: if true;
+    }
+
+    match /schoolStaff/{staffId} {
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

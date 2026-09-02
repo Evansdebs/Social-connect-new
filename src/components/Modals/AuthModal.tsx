@@ -23,7 +23,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { saveUserToFirebase, getUserFromFirebase, saveSchoolToFirebase } from '../../lib/firestoreService';
-import { User, UserRole, School } from '../../types';
+import { User, UserRole, UserType, School } from '../../types';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -39,7 +39,7 @@ export const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
-  const [role, setRole] = useState<UserRole>('student');
+  const [userType, setUserType] = useState<UserType>('student');
   const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || 'custom');
   const [customSchoolName, setCustomSchoolName] = useState('');
   const [classLevel, setClassLevel] = useState('Senior Secondary (Year 12)');
@@ -69,7 +69,9 @@ export const AuthModal: React.FC = () => {
             name: fbUser.displayName || email.split('@')[0],
             username: (fbUser.displayName || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '_'),
             email: fbUser.email || email,
-            role: 'student',
+            role: 'user',
+            userType: 'student',
+            accountStatus: 'active',
             avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
             coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
             bio: 'Student at Campus Connect',
@@ -146,20 +148,22 @@ export const AuthModal: React.FC = () => {
           name: name.trim(),
           username: (username.trim() || name.trim().toLowerCase().replace(/\s+/g, '_')).replace('@', ''),
           email: fbUser.email || email.trim(),
-          role: role,
+          role: 'user',
+          userType: userType,
+          accountStatus: 'active',
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
           coverImage: selectedSchool?.coverImage || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-          bio: `${role === 'student' ? 'Student' : role === 'teacher' ? 'Faculty Teacher' : 'Campus Administrator'} at ${finalSchoolName}. Passionate about learning and collaboration!`,
+          bio: `${userType === 'student' ? 'Student' : userType === 'teacher' ? 'Faculty Teacher' : 'Member'} at ${finalSchoolName}. Passionate about learning and collaboration!`,
           schoolId: finalSchoolId,
           schoolName: finalSchoolName,
           classLevel: classLevel.trim(),
           interests: ['Academics', 'Campus Life', 'Leadership'],
-          creatorTalents: ['Student Leadership'],
+          creatorTalents: ['Campus Member'],
           badges: ['New Member', finalSchoolName],
           followersCount: 0,
           followingCount: 0,
           connectionsCount: 0,
-          isVerified: role === 'school_admin' || role === 'teacher',
+          isVerified: false,
           isPrivate: false,
           allowDownloads: true,
           whoCanMessage: 'everyone',
@@ -206,10 +210,12 @@ export const AuthModal: React.FC = () => {
           name: fbUser.displayName || 'Campus Member',
           username: (fbUser.displayName || 'student').toLowerCase().replace(/[^a-z0-9]/g, '_'),
           email: fbUser.email || '',
-          role: 'student',
+          role: 'user',
+          userType: 'student',
+          accountStatus: 'active',
           avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
           coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-          bio: 'Campus Connect student member',
+          bio: 'Campus Connect member',
           schoolId: defaultSchoolId,
           schoolName: defaultSchoolName,
           classLevel: 'Year 12',
@@ -361,15 +367,17 @@ export const AuthModal: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-neutral-700 block mb-1">Campus Role</label>
+                    <label className="font-bold text-neutral-700 block mb-1">Campus Affiliation</label>
                     <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as UserRole)}
+                      value={userType}
+                      onChange={(e) => setUserType(e.target.value as UserType)}
                       className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500"
                     >
                       <option value="student">Student</option>
                       <option value="teacher">Teacher / Faculty</option>
-                      <option value="school_admin">School Admin</option>
+                      <option value="staff">Staff / Admin</option>
+                      <option value="alumni">Alumni</option>
+                      <option value="other">Other Member</option>
                     </select>
                   </div>
 

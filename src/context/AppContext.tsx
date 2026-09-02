@@ -13,7 +13,9 @@ import {
   Conversation,
   NotificationItem,
   SchoolMemoryAlbum,
-  ReportItem
+  ReportItem,
+  SchoolStaffRecord,
+  SchoolStaffPermissions
 } from '../types';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -27,6 +29,7 @@ import {
   subscribeToClubs,
   subscribeToEvents,
   subscribeToUsers,
+  subscribeToSchoolStaff,
   savePostToFirebase,
   updatePostInFirebase,
   deletePostFromFirebase,
@@ -44,7 +47,14 @@ import {
   updateUserInFirebase,
   getUserFromFirebase,
   saveCommentToFirebase,
-  deleteCommentFromFirebase
+  deleteCommentFromFirebase,
+  saveSchoolStaffToFirebase,
+  deleteSchoolStaffFromFirebase,
+  deleteSchoolFromFirebase,
+  deleteUserFromFirebase,
+  deleteReelFromFirebase,
+  deleteStoryFromFirebase,
+  deleteClubFromFirebase
 } from '../lib/firestoreService';
 import {
   DEFAULT_GUEST_USER,
@@ -84,6 +94,7 @@ export type ModalType =
   | 'create_poll'
   | 'report'
   | 'share'
+  | 'super_admin'
   | 'school_admin'
   | 'platform_admin'
   | 'edit_profile'
@@ -96,15 +107,26 @@ interface AppContextType {
   firebaseUserEmail: string | null;
   isAuthenticated: boolean;
   isAuthChecking: boolean;
+  isSuperAdmin: boolean;
   setAuthUser: (user: User) => void;
   signOutUser: () => Promise<void>;
   switchUser: (userId: string) => void;
   updateCurrentUserProfile: (updatedData: Partial<User>) => void;
+  updateUserStatus: (userId: string, status: 'active' | 'suspended') => void;
+  toggleUserVerification: (userId: string) => void;
+  deleteUserAccount: (userId: string) => void;
   schools: School[];
   selectedSchoolId: string | null;
   setSelectedSchoolId: (id: string | null) => void;
   addSchool: (school: School) => void;
+  updateSchool: (schoolId: string, partial: Partial<School>) => void;
+  deleteSchool: (schoolId: string) => void;
   activeSchool: School;
+  schoolStaff: SchoolStaffRecord[];
+  isSchoolAuthorized: (schoolId?: string) => boolean;
+  getSchoolPermissions: (schoolId?: string) => SchoolStaffPermissions | null;
+  assignSchoolStaff: (record: Omit<SchoolStaffRecord, 'id' | 'assignedAt'>) => void;
+  removeSchoolStaff: (staffId: string) => void;
   posts: Post[];
   createPost: (post: Omit<Post, 'id' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'repostsCount' | 'createdAt'>) => void;
   deletePost: (postId: string) => void;
@@ -118,12 +140,15 @@ interface AppContextType {
   toggleSavePost: (postId: string) => void;
   stories: Story[];
   createStory: (story: Omit<Story, 'id' | 'authorId' | 'authorName' | 'authorUsername' | 'authorAvatar' | 'authorSchool' | 'createdAt'>) => void;
+  deleteStory: (storyId: string) => void;
   markStoryViewed: (storyId: string) => void;
   reels: Reel[];
   createReel: (reel: Omit<Reel, 'id' | 'creatorId' | 'creatorName' | 'creatorUsername' | 'creatorAvatar' | 'creatorSchool' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'downloadsCount' | 'createdAt'>) => void;
   likeReel: (reelId: string) => void;
+  deleteReel: (reelId: string) => void;
   clubs: GroupClub[];
   toggleJoinClub: (clubId: string) => void;
+  deleteClub: (clubId: string) => void;
   challenges: Challenge[];
   voteChallenge: (challengeId: string, schoolId: string) => void;
   events: CampusEvent[];
@@ -284,6 +309,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [schoolStaff, setSchoolStaff] = useState<SchoolStaffRecord[]>(() => {
+    const saved = localStorage.getItem('cc_school_staff');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
@@ -307,6 +337,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('cc_schools', JSON.stringify(schools));
   }, [schools]);
+
+  useEffect(() => {
+    localStorage.setItem('cc_school_staff', JSON.stringify(schoolStaff));
+  }, [schoolStaff]);
 
   useEffect(() => {
     localStorage.setItem('cc_posts', JSON.stringify(posts));
@@ -399,16 +433,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Campus Member',
               username: (fbUser.displayName || fbUser.email?.split('@')[0] || 'member').toLowerCase().replace(/[^a-z0-9]/g, '_'),
               email: fbUser.email || '',
-              role: 'student',
+              role: 'user',
+              userType: 'student',
+              accountStatus: 'active',
               avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
               coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-              bio: 'Campus Connect student member',
+              bio: 'Campus Connect member',
               schoolId: '',
               schoolName: 'Campus Connect',
               classLevel: 'Student',
               interests: ['Academics', 'Campus Life'],
               creatorTalents: [],
-              badges: ['Verified Student'],
+              badges: ['Verified Member'],
               followersCount: 0,
               followingCount: 0,
               connectionsCount: 0,
@@ -501,6 +537,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // Real-time school staff stream
+    const unsubStaff = subscribeToSchoolStaff((liveStaff) => {
+      setSchoolStaff(liveStaff);
+    });
+
     return () => {
       unsubAuth();
       unsubPosts();
@@ -512,6 +553,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubClubs();
       unsubEvents();
       unsubUsers();
+      unsubStaff();
     };
   }, []);
 
@@ -583,6 +625,73 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Profile updated & synced to Cloud Firestore!', 'success');
   };
 
+  const isSuperAdmin = currentUser.role === 'super_admin';
+
+  const isSchoolAuthorized = (schoolId?: string): boolean => {
+    if (!schoolId) return isSuperAdmin;
+    if (isSuperAdmin) return true;
+    return schoolStaff.some(
+      (s) => s.userId === currentUser.id && s.schoolId === schoolId
+    );
+  };
+
+  const getSchoolPermissions = (schoolId?: string): SchoolStaffPermissions | null => {
+    if (isSuperAdmin) {
+      return {
+        manageSchoolProfile: true,
+        createSchoolPosts: true,
+        manageSchoolEvents: true
+      };
+    }
+    const staffRecord = schoolStaff.find(
+      (s) => s.userId === currentUser.id && s.schoolId === schoolId
+    );
+    return staffRecord ? staffRecord.permissions : null;
+  };
+
+  const assignSchoolStaff = (record: Omit<SchoolStaffRecord, 'id' | 'assignedAt'>) => {
+    const newRecord: SchoolStaffRecord = {
+      ...record,
+      id: `staff-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      assignedAt: new Date().toISOString()
+    };
+    setSchoolStaff((prev) => [newRecord, ...prev.filter(s => !(s.userId === record.userId && s.schoolId === record.schoolId))]);
+    saveSchoolStaffToFirebase(newRecord);
+    showToast(`Assigned ${record.userName} as representative for ${record.schoolName}!`, 'success');
+  };
+
+  const removeSchoolStaff = (staffId: string) => {
+    setSchoolStaff((prev) => prev.filter((s) => s.id !== staffId));
+    deleteSchoolStaffFromFirebase(staffId);
+    showToast('School staff authorization revoked.', 'info');
+  };
+
+  const updateUserStatus = (userId: string, status: 'active' | 'suspended') => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, accountStatus: status } : u))
+    );
+    updateUserInFirebase(userId, { accountStatus: status });
+    showToast(`User account status set to ${status}.`, 'info');
+  };
+
+  const toggleUserVerification = (userId: string) => {
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+        const newVer = !u.isVerified;
+        updateUserInFirebase(userId, { isVerified: newVer });
+        showToast(newVer ? `Granted verified status to ${u.name}` : `Removed verified status from ${u.name}`, 'info');
+        return { ...u, isVerified: newVer };
+      })
+    );
+  };
+
+  const deleteUserAccount = (userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId));
+    deleteUserFromFirebase(userId);
+    showToast('User account removed permanently.', 'info');
+  };
+
   const activeSchool: School =
     schools.find((s) => s.id === selectedSchoolId) || schools[0] || DEFAULT_BLANK_SCHOOL;
 
@@ -592,6 +701,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [school, ...prev];
     });
     saveSchoolToFirebase(school);
+  };
+
+  const updateSchool = (schoolId: string, partial: Partial<School>) => {
+    setSchools((prev) =>
+      prev.map((s) => (s.id === schoolId ? { ...s, ...partial } : s))
+    );
+    const existing = schools.find((s) => s.id === schoolId);
+    if (existing) {
+      saveSchoolToFirebase({ ...existing, ...partial });
+    }
+    showToast('School updated successfully.', 'success');
+  };
+
+  const deleteSchool = (schoolId: string) => {
+    setSchools((prev) => prev.filter((s) => s.id !== schoolId));
+    deleteSchoolFromFirebase(schoolId);
+    if (selectedSchoolId === schoolId) {
+      setSelectedSchoolId(null);
+    }
+    showToast('School removed.', 'info');
   };
 
   const deletePost = (postId: string) => {
@@ -772,6 +901,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const deleteStory = (storyId: string) => {
+    setStories((prev) => prev.filter((s) => s.id !== storyId));
+    deleteStoryFromFirebase(storyId);
+    showToast('Story removed.', 'info');
+  };
+
   const createReel = (reelData: Omit<Reel, 'id' | 'creatorId' | 'creatorName' | 'creatorUsername' | 'creatorAvatar' | 'creatorSchool' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'downloadsCount' | 'createdAt'>) => {
     const newReel: Reel = {
       ...reelData,
@@ -809,6 +944,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const deleteReel = (reelId: string) => {
+    setReels((prev) => prev.filter((r) => r.id !== reelId));
+    deleteReelFromFirebase(reelId);
+    showToast('Reel removed.', 'info');
+  };
+
   const toggleJoinClub = (clubId: string) => {
     setClubs((prev) =>
       prev.map((c) => {
@@ -824,6 +965,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       })
     );
+  };
+
+  const deleteClub = (clubId: string) => {
+    setClubs((prev) => prev.filter((c) => c.id !== clubId));
+    deleteClubFromFirebase(clubId);
+    showToast('Club removed.', 'info');
   };
 
   const voteChallenge = (challengeId: string, schoolId: string) => {
@@ -1052,15 +1199,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         firebaseUserEmail,
         isAuthenticated,
         isAuthChecking,
+        isSuperAdmin,
         setAuthUser,
         signOutUser,
         switchUser,
         updateCurrentUserProfile,
+        updateUserStatus,
+        toggleUserVerification,
+        deleteUserAccount,
         schools,
         selectedSchoolId,
         setSelectedSchoolId,
         addSchool,
+        updateSchool,
+        deleteSchool,
         activeSchool,
+        schoolStaff,
+        isSchoolAuthorized,
+        getSchoolPermissions,
+        assignSchoolStaff,
+        removeSchoolStaff,
         posts,
         createPost,
         deletePost,
@@ -1074,12 +1232,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleSavePost,
         stories,
         createStory,
+        deleteStory,
         markStoryViewed,
         reels,
         createReel,
         likeReel,
+        deleteReel,
         clubs,
         toggleJoinClub,
+        deleteClub,
         challenges,
         voteChallenge,
         events,

@@ -24,7 +24,9 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
     activeSchool,
     setSelectedSchoolId,
     clubs,
-    openModal
+    openModal,
+    isSuperAdmin,
+    isSchoolAuthorized
   } = useApp();
 
   const navItems: { id: ActiveTab; label: string; icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
@@ -94,7 +96,7 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
         })}
 
         {/* Conditional Admin Shortcuts */}
-        {currentUser.role === 'school_admin' && (
+        {isSchoolAuthorized(activeSchool?.id || currentUser.schoolId) && (
           <button
             id="sidebar-school-admin-btn"
             onClick={() => openModal('school_admin')}
@@ -102,23 +104,23 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
           >
             <div className="flex items-center gap-3">
               <ShieldCheck className="w-5 h-5 text-amber-600" />
-              <span>School Admin</span>
+              <span>School Portal</span>
             </div>
-            <span className="text-[10px] bg-amber-100 px-2 py-0.5 rounded-full font-bold">MANAGE</span>
+            <span className="text-[10px] bg-amber-100 px-2 py-0.5 rounded-full font-bold">STAFF</span>
           </button>
         )}
 
-        {currentUser.role === 'platform_admin' && (
+        {isSuperAdmin && (
           <button
             id="sidebar-platform-admin-btn"
-            onClick={() => openModal('platform_admin')}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-rose-700 hover:bg-rose-50 transition-colors"
+            onClick={() => openModal('super_admin')}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-rose-600" />
-              <span>Platform Desk</span>
+              <ShieldCheck className="w-5 h-5 text-purple-600" />
+              <span>Super Admin</span>
             </div>
-            <span className="text-[10px] bg-rose-100 px-2 py-0.5 rounded-full font-bold">ADMIN</span>
+            <span className="text-[10px] bg-purple-100 px-2 py-0.5 rounded-full font-bold">CONSOLE</span>
           </button>
         )}
       </nav>

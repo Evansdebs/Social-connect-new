@@ -24,7 +24,8 @@ import {
   NotificationItem,
   User,
   School,
-  ReportItem
+  ReportItem,
+  SchoolStaffRecord
 } from '../types';
 
 // No seeded dummy data - production relies solely on real user accounts and creations
@@ -395,5 +396,84 @@ export async function getUserFromFirebase(userId: string): Promise<User | null> 
   } catch (err) {
     console.warn('getUserFromFirebase fallback:', err);
     return null;
+  }
+}
+
+export async function deleteUserFromFirebase(userId: string) {
+  try {
+    await deleteDoc(doc(db, 'users', userId));
+  } catch (err) {
+    console.warn('deleteUserFromFirebase fallback:', err);
+  }
+}
+
+export async function deleteSchoolFromFirebase(schoolId: string) {
+  try {
+    await deleteDoc(doc(db, 'schools', schoolId));
+  } catch (err) {
+    console.warn('deleteSchoolFromFirebase fallback:', err);
+  }
+}
+
+export async function deleteReelFromFirebase(reelId: string) {
+  try {
+    await deleteDoc(doc(db, 'reels', reelId));
+  } catch (err) {
+    console.warn('deleteReelFromFirebase fallback:', err);
+  }
+}
+
+export async function deleteStoryFromFirebase(storyId: string) {
+  try {
+    await deleteDoc(doc(db, 'stories', storyId));
+  } catch (err) {
+    console.warn('deleteStoryFromFirebase fallback:', err);
+  }
+}
+
+export async function deleteClubFromFirebase(clubId: string) {
+  try {
+    await deleteDoc(doc(db, 'clubs', clubId));
+  } catch (err) {
+    console.warn('deleteClubFromFirebase fallback:', err);
+  }
+}
+
+// -------------------------------------------------------------
+// School Staff Authorizations
+// -------------------------------------------------------------
+
+export function subscribeToSchoolStaff(onUpdate: (staff: SchoolStaffRecord[]) => void) {
+  try {
+    const q = query(collection(db, 'schoolStaff'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: SchoolStaffRecord[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as SchoolStaffRecord);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore schoolStaff snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export async function saveSchoolStaffToFirebase(staff: SchoolStaffRecord) {
+  try {
+    await setDoc(doc(db, 'schoolStaff', staff.id), staff);
+  } catch (err) {
+    console.warn('saveSchoolStaffToFirebase fallback:', err);
+  }
+}
+
+export async function deleteSchoolStaffFromFirebase(staffId: string) {
+  try {
+    await deleteDoc(doc(db, 'schoolStaff', staffId));
+  } catch (err) {
+    console.warn('deleteSchoolStaffFromFirebase fallback:', err);
   }
 }

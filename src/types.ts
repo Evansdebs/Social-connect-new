@@ -1,4 +1,25 @@
-export type UserRole = 'student' | 'teacher' | 'school_admin' | 'platform_admin';
+export type UserRole = 'user' | 'super_admin';
+
+export type UserType = 'student' | 'teacher' | 'staff' | 'alumni' | 'other';
+
+export interface SchoolStaffPermissions {
+  manageSchoolProfile: boolean;
+  createSchoolPosts: boolean;
+  manageSchoolEvents: boolean;
+}
+
+export interface SchoolStaffRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userUsername: string;
+  userEmail?: string;
+  schoolId: string;
+  schoolName: string;
+  permissions: SchoolStaffPermissions;
+  assignedAt: string;
+  assignedBy?: string;
+}
 
 export interface User {
   id: string;
@@ -6,6 +27,9 @@ export interface User {
   username: string;
   email: string;
   role: UserRole;
+  userType?: UserType;
+  occupation?: string;
+  accountStatus?: 'active' | 'suspended';
   avatar: string;
   coverImage: string;
   bio: string;
@@ -23,6 +47,8 @@ export interface User {
   allowDownloads: boolean;
   whoCanMessage: 'everyone' | 'connections' | 'nobody';
   whoCanConnect: 'everyone' | 'same_school';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface School {
