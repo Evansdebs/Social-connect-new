@@ -21,6 +21,7 @@ export const SchoolProfileView: React.FC = () => {
     activeSchool,
     schools,
     setSelectedSchoolId,
+    addSchool,
     posts,
     clubs,
     events,
@@ -36,23 +37,75 @@ export const SchoolProfileView: React.FC = () => {
   >('feed');
 
   const [isFollowingSchool, setIsFollowingSchool] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [newSchoolName, setNewSchoolName] = useState('');
+  const [newSchoolMotto, setNewSchoolMotto] = useState('');
+  const [newSchoolLocation, setNewSchoolLocation] = useState('');
+  const [newSchoolRegion, setNewSchoolRegion] = useState('');
+  const [newSchoolWebsite, setNewSchoolWebsite] = useState('');
 
-  // Filter school-specific data
-  const schoolPosts = posts.filter(
-    (p) => p.schoolId === activeSchool.id || p.authorSchool === activeSchool.name
-  );
+  const handleRegisterSchool = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSchoolName.trim()) {
+      showToast('Please enter the school name', 'error');
+      return;
+    }
 
-  const schoolClubs = clubs.filter(
-    (c) => c.schoolId === activeSchool.id || c.schoolName === activeSchool.name
-  );
+    const username = newSchoolName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const createdSchool = {
+      id: `school_${Date.now()}`,
+      name: newSchoolName.trim(),
+      username,
+      logo: `https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=150&auto=format&fit=crop&q=80`,
+      coverImage: `https://images.unsplash.com/photo-1562774053-701939374585?w=1200&auto=format&fit=crop&q=80`,
+      motto: newSchoolMotto.trim() || 'Excellence and Knowledge',
+      description: `${newSchoolName.trim()} campus community hub on Campus Connect.`,
+      established: new Date().getFullYear(),
+      location: newSchoolLocation.trim() || 'Main Campus',
+      region: newSchoolRegion.trim() || 'Regional Campus',
+      website: newSchoolWebsite.trim() ? (newSchoolWebsite.startsWith('http') ? newSchoolWebsite : `https://${newSchoolWebsite}`) : 'https://campusconnect.edu',
+      studentCount: 1,
+      followersCount: 1,
+      isVerified: true,
+      rankings: {
+        activeRank: schools.length + 1,
+        challengeWins: 0,
+        academicScore: 85,
+        sportsScore: 80
+      }
+    };
 
-  const schoolEvents = events.filter((e) => e.schoolId === activeSchool.id);
+    addSchool(createdSchool);
+    setSelectedSchoolId(createdSchool.id);
+    showToast(`Campus "${createdSchool.name}" registered successfully!`, 'success');
+    setShowRegisterModal(false);
+    setNewSchoolName('');
+    setNewSchoolMotto('');
+    setNewSchoolLocation('');
+    setNewSchoolRegion('');
+    setNewSchoolWebsite('');
+  };
 
-  const schoolAlbums = schoolMemories.filter((m) => m.schoolId === activeSchool.id);
+  // Filter school-specific data safely
+  const schoolPosts = activeSchool
+    ? posts.filter((p) => p.schoolId === activeSchool.id || p.authorSchool === activeSchool.name)
+    : [];
 
-  const schoolChallenges = challenges.filter(
-    (ch) => ch.schoolA.id === activeSchool.id || ch.schoolB.id === activeSchool.id
-  );
+  const schoolClubs = activeSchool
+    ? clubs.filter((c) => c.schoolId === activeSchool.id || c.schoolName === activeSchool.name)
+    : [];
+
+  const schoolEvents = activeSchool
+    ? events.filter((e) => e.schoolId === activeSchool.id)
+    : [];
+
+  const schoolAlbums = activeSchool
+    ? schoolMemories.filter((m) => m.schoolId === activeSchool.id)
+    : [];
+
+  const schoolChallenges = activeSchool
+    ? challenges.filter((ch) => ch.schoolA.id === activeSchool.id || ch.schoolB.id === activeSchool.id)
+    : [];
 
   return (
     <div className="space-y-5">
@@ -66,7 +119,7 @@ export const SchoolProfileView: React.FC = () => {
             key={s.id}
             onClick={() => setSelectedSchoolId(s.id)}
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              activeSchool.id === s.id
+              activeSchool?.id === s.id
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
             }`}
@@ -75,7 +128,125 @@ export const SchoolProfileView: React.FC = () => {
             <span>{s.name}</span>
           </button>
         ))}
+
+        <button
+          onClick={() => setShowRegisterModal(true)}
+          className="px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Register School</span>
+        </button>
       </div>
+
+      {/* Modal / Dialog for Registering a New School */}
+      {showRegisterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-neutral-100 animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-black text-neutral-900 mb-1 flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              <span>Register Campus School</span>
+            </h3>
+            <p className="text-xs text-neutral-500 mb-4">
+              Add your high school, academy, college, or university to the Campus Connect network.
+            </p>
+
+            <form onSubmit={handleRegisterSchool} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">School Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Achimota School or University of Ghana"
+                  value={newSchoolName}
+                  onChange={(e) => setNewSchoolName(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs outline-none focus:border-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Motto / Tagline</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Integrity and Excellence"
+                  value={newSchoolMotto}
+                  onChange={(e) => setNewSchoolMotto(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs outline-none focus:border-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Location / City</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Accra"
+                    value={newSchoolLocation}
+                    onChange={(e) => setNewSchoolLocation(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Region / State</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Greater Accra"
+                    value={newSchoolRegion}
+                    onChange={(e) => setNewSchoolRegion(e.target.value)}
+                    className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs outline-none focus:border-blue-500 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Official Website</label>
+                <input
+                  type="text"
+                  placeholder="e.g. achimota.edu.gh"
+                  value={newSchoolWebsite}
+                  onChange={(e) => setNewSchoolWebsite(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs outline-none focus:border-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 hover:bg-neutral-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                >
+                  Save & Connect Campus
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {!activeSchool ? (
+        <div className="bg-white rounded-3xl border border-neutral-200/80 p-12 text-center shadow-xs">
+          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-lg font-black text-neutral-900 mb-1">No Campus Selected Yet</h2>
+          <p className="text-xs text-neutral-500 max-w-sm mx-auto mb-5">
+            Register your institution or campus to enable school rankings, club directories, student updates, and events.
+          </p>
+          <button
+            onClick={() => setShowRegisterModal(true)}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs inline-flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Register Your Campus School</span>
+          </button>
+        </div>
+      ) : (
+        <>
 
       {/* Official School Header Card (Section 28 & 89) */}
       <div className="bg-white rounded-3xl border border-neutral-200/80 overflow-hidden shadow-xs">
@@ -379,6 +550,8 @@ export const SchoolProfileView: React.FC = () => {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );

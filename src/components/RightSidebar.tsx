@@ -173,52 +173,58 @@ export const RightSidebar: React.FC = () => {
           <span className="text-[10px] text-neutral-400">Cross-Campus</span>
         </div>
 
-        <div className="space-y-3">
-          {candidateUsers.slice(0, 3).map((user) => {
-            const isConnected = connectedUserIds.includes(user.id);
-            return (
-              <div key={user.id} className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
-                    <p className="text-[10px] text-blue-600 truncate">{user.schoolName}</p>
-                    <p className="text-[10px] text-neutral-400 truncate">
-                      {(user.creatorTalents || []).slice(0, 2).join(' • ')}
-                    </p>
+        {candidateUsers.length > 0 ? (
+          <div className="space-y-3">
+            {candidateUsers.slice(0, 3).map((user) => {
+              const isConnected = connectedUserIds.includes(user.id);
+              return (
+                <div key={user.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
+                      <p className="text-[10px] text-blue-600 truncate">{user.schoolName}</p>
+                      <p className="text-[10px] text-neutral-400 truncate">
+                        {(user.creatorTalents || []).slice(0, 2).join(' • ')}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <button
-                  id={`connect-user-${user.id}-btn`}
-                  onClick={() => requestConnection(user.id)}
-                  className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 ${
-                    isConnected
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700'
-                  }`}
-                  title={isConnected ? 'Connected' : 'Send Connection Request'}
-                >
-                  {isConnected ? (
-                    <>
-                      <Check className="w-3 h-3 text-emerald-600" />
-                      <span className="text-[10px]">Connected</span>
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-3 h-3" />
-                      <span className="text-[10px]">Connect</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+                  <button
+                    id={`connect-user-${user.id}-btn`}
+                    onClick={() => requestConnection(user.id)}
+                    className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 ${
+                      isConnected
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700'
+                    }`}
+                    title={isConnected ? 'Connected' : 'Send Connection Request'}
+                  >
+                    {isConnected ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span className="text-[10px]">Connected</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3 h-3" />
+                        <span className="text-[10px]">Connect</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-neutral-500 text-center py-2">
+            New students joining Campus Connect will appear here.
+          </p>
+        )}
       </div>
 
       {/* Footer Meta */}

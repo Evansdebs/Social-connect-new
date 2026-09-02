@@ -18,12 +18,15 @@ import {
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import {
-  seedFirestoreInitialData,
   subscribeToPosts,
   subscribeToStories,
   subscribeToReels,
   subscribeToConversations,
   subscribeToComments,
+  subscribeToSchools,
+  subscribeToClubs,
+  subscribeToEvents,
+  subscribeToUsers,
   savePostToFirebase,
   updatePostInFirebase,
   deletePostFromFirebase,
@@ -36,12 +39,16 @@ import {
   saveConversationToFirebase,
   saveReportToFirebase,
   saveUserToFirebase,
+  saveSchoolToFirebase,
+  saveClubToFirebase,
   updateUserInFirebase,
   getUserFromFirebase,
   saveCommentToFirebase,
   deleteCommentFromFirebase
 } from '../lib/firestoreService';
 import {
+  DEFAULT_GUEST_USER,
+  DEFAULT_BLANK_SCHOOL,
   INITIAL_USERS,
   INITIAL_SCHOOLS,
   INITIAL_POSTS,
@@ -94,9 +101,11 @@ interface AppContextType {
   schools: School[];
   selectedSchoolId: string | null;
   setSelectedSchoolId: (id: string | null) => void;
+  addSchool: (school: School) => void;
   activeSchool: School;
   posts: Post[];
   createPost: (post: Omit<Post, 'id' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'repostsCount' | 'createdAt'>) => void;
+  deletePost: (postId: string) => void;
   likePost: (postId: string, reaction?: 'like' | 'love' | 'funny' | 'celebrate' | 'wow') => void;
   repostPost: (postId: string, comment?: string) => void;
   comments: Record<string, Comment[]>;
@@ -151,101 +160,126 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load state or default
+  // Purge any legacy dummy items from localStorage once for a clean production slate
+  if (typeof window !== 'undefined') {
+    const version = localStorage.getItem('cc_clean_prod_v2');
+    if (!version) {
+      const keysToClean = [
+        'cc_users',
+        'cc_current_user_id',
+        'cc_schools',
+        'cc_selected_school_id',
+        'cc_posts',
+        'cc_comments',
+        'cc_saved_posts',
+        'cc_stories',
+        'cc_reels',
+        'cc_clubs',
+        'cc_challenges',
+        'cc_events',
+        'cc_opportunities',
+        'cc_conversations',
+        'cc_notifications',
+        'cc_reports',
+        'cc_followed_users',
+        'cc_connected_users'
+      ];
+      keysToClean.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem('cc_clean_prod_v2', 'true');
+    }
+  }
+
+  // Load state or default to empty production state
   const [users, setUsers] = useState<User[]>(() => {
     const saved = localStorage.getItem('cc_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return localStorage.getItem('cc_current_user_id') || 'user-kwame';
+    return localStorage.getItem('cc_current_user_id') || '';
   });
 
   const [schools, setSchools] = useState<School[]>(() => {
     const saved = localStorage.getItem('cc_schools');
-    return saved ? JSON.parse(saved) : INITIAL_SCHOOLS;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>('school-1');
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(() => {
+    return localStorage.getItem('cc_selected_school_id') || null;
+  });
 
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('cc_posts');
-    return saved ? JSON.parse(saved) : INITIAL_POSTS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [comments, setComments] = useState<Record<string, Comment[]>>(() => {
     const saved = localStorage.getItem('cc_comments');
-    if (saved) return JSON.parse(saved);
-    const initialMap: Record<string, Comment[]> = {};
-    INITIAL_COMMENTS.forEach((c) => {
-      if (!initialMap[c.postId]) initialMap[c.postId] = [];
-      initialMap[c.postId].push(c);
-    });
-    return initialMap;
+    return saved ? JSON.parse(saved) : {};
   });
 
   const [savedPostIds, setSavedPostIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('cc_saved_posts');
-    return saved ? JSON.parse(saved) : ['post-2'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [stories, setStories] = useState<Story[]>(() => {
     const saved = localStorage.getItem('cc_stories');
-    return saved ? JSON.parse(saved) : INITIAL_STORIES;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [reels, setReels] = useState<Reel[]>(() => {
     const saved = localStorage.getItem('cc_reels');
-    return saved ? JSON.parse(saved) : INITIAL_REELS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [clubs, setClubs] = useState<GroupClub[]>(() => {
     const saved = localStorage.getItem('cc_clubs');
-    return saved ? JSON.parse(saved) : INITIAL_CLUBS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [challenges, setChallenges] = useState<Challenge[]>(() => {
     const saved = localStorage.getItem('cc_challenges');
-    return saved ? JSON.parse(saved) : INITIAL_CHALLENGES;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [events, setEvents] = useState<CampusEvent[]>(() => {
     const saved = localStorage.getItem('cc_events');
-    return saved ? JSON.parse(saved) : INITIAL_EVENTS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>(() => {
     const saved = localStorage.getItem('cc_opportunities');
-    return saved ? JSON.parse(saved) : INITIAL_OPPORTUNITIES;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     const saved = localStorage.getItem('cc_conversations');
-    return saved ? JSON.parse(saved) : INITIAL_CONVERSATIONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [activeConversationId, setActiveConversationId] = useState<string | null>('conv-1');
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     const saved = localStorage.getItem('cc_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    return saved ? JSON.parse(saved) : [];
   });
 
-  const [schoolMemories] = useState<SchoolMemoryAlbum[]>(INITIAL_MEMORIES);
+  const [schoolMemories] = useState<SchoolMemoryAlbum[]>([]);
 
   const [reports, setReports] = useState<ReportItem[]>(() => {
     const saved = localStorage.getItem('cc_reports');
-    return saved ? JSON.parse(saved) : INITIAL_REPORTS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [followedUserIds, setFollowedUserIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('cc_followed_users');
-    return saved ? JSON.parse(saved) : ['user-ama', 'user-teacher-angela'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [connectedUserIds, setConnectedUserIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('cc_connected_users');
-    return saved ? JSON.parse(saved) : ['user-ama'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
@@ -329,8 +363,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Firestore & Firebase Auth real-time sync
   useEffect(() => {
-    seedFirestoreInitialData();
-
     // Listen for Firebase Auth user
     const unsubAuth = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
@@ -361,50 +393,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Real-time live posts stream
     const unsubPosts = subscribeToPosts((livePosts) => {
-      if (livePosts && livePosts.length > 0) {
-        setPosts((prev) => {
-          return livePosts.map((lp) => {
-            const existing = prev.find((p) => p.id === lp.id);
-            return existing ? { ...lp, likedByUser: existing.likedByUser, userReaction: existing.userReaction } : lp;
-          });
+      setPosts((prev) => {
+        return livePosts.map((lp) => {
+          const existing = prev.find((p) => p.id === lp.id);
+          return existing ? { ...lp, likedByUser: existing.likedByUser, userReaction: existing.userReaction } : lp;
         });
-      }
+      });
     });
 
     // Real-time stories stream
     const unsubStories = subscribeToStories((liveStories) => {
-      if (liveStories && liveStories.length > 0) {
-        setStories(liveStories);
-      }
+      setStories(liveStories);
     });
 
     // Real-time reels stream
     const unsubReels = subscribeToReels((liveReels) => {
-      if (liveReels && liveReels.length > 0) {
-        setReels(liveReels);
-      }
+      setReels(liveReels);
     });
 
     // Real-time conversations stream
     const unsubConvs = subscribeToConversations((liveConvs) => {
-      if (liveConvs && liveConvs.length > 0) {
-        setConversations(liveConvs);
-      }
+      setConversations(liveConvs);
     });
 
     // Real-time comments stream
     const unsubComments = subscribeToComments((liveComments) => {
-      if (liveComments && liveComments.length > 0) {
-        setComments((prev) => {
-          const updated: Record<string, Comment[]> = { ...prev };
-          liveComments.forEach((c) => {
-            if (!updated[c.postId]) updated[c.postId] = [];
-            if (!updated[c.postId].some((e) => e.id === c.id)) {
-              updated[c.postId].push(c);
-            }
-          });
-          return updated;
+      setComments((prev) => {
+        const updated: Record<string, Comment[]> = { ...prev };
+        liveComments.forEach((c) => {
+          if (!updated[c.postId]) updated[c.postId] = [];
+          if (!updated[c.postId].some((e) => e.id === c.id)) {
+            updated[c.postId].push(c);
+          }
         });
+        return updated;
+      });
+    });
+
+    // Real-time schools stream
+    const unsubSchools = subscribeToSchools((liveSchools) => {
+      if (liveSchools.length > 0) {
+        setSchools(liveSchools);
+      }
+    });
+
+    // Real-time clubs stream
+    const unsubClubs = subscribeToClubs((liveClubs) => {
+      if (liveClubs.length > 0) {
+        setClubs(liveClubs);
+      }
+    });
+
+    // Real-time events stream
+    const unsubEvents = subscribeToEvents((liveEvents) => {
+      if (liveEvents.length > 0) {
+        setEvents(liveEvents);
+      }
+    });
+
+    // Real-time users stream
+    const unsubUsers = subscribeToUsers((liveUsers) => {
+      if (liveUsers.length > 0) {
+        setUsers(liveUsers);
       }
     });
 
@@ -415,6 +465,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubReels();
       unsubConvs();
       unsubComments();
+      unsubSchools();
+      unsubClubs();
+      unsubEvents();
+      unsubUsers();
     };
   }, []);
 
@@ -425,7 +479,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 3500);
   };
 
-  const currentUser = users.find((u) => u.id === currentUserId) || users[0];
+  const currentUser: User =
+    users.find((u) => u.id === currentUserId) || users[0] || DEFAULT_GUEST_USER;
 
   const setAuthUser = (user: User) => {
     setUsers((prev) => {
@@ -448,8 +503,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await signOut(auth);
       setIsFirebaseAuthActive(false);
       setFirebaseUserEmail(null);
-      setCurrentUserId('user-kwame');
-      showToast('Signed out of Firebase account.', 'info');
+      setCurrentUserId('');
+      showToast('Signed out of your account.', 'info');
     } catch (err: any) {
       showToast('Sign out issue: ' + err.message, 'error');
     }
@@ -474,7 +529,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Profile updated & synced to Cloud Firestore!', 'success');
   };
 
-  const activeSchool = schools.find((s) => s.id === selectedSchoolId) || schools[0];
+  const activeSchool: School =
+    schools.find((s) => s.id === selectedSchoolId) || schools[0] || DEFAULT_BLANK_SCHOOL;
+
+  const addSchool = (school: School) => {
+    setSchools((prev) => {
+      if (prev.some((s) => s.id === school.id)) return prev;
+      return [school, ...prev];
+    });
+    saveSchoolToFirebase(school);
+  };
+
+  const deletePost = (postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    deletePostFromFirebase(postId);
+    showToast('Post removed successfully.', 'info');
+  };
 
   const createPost = (newPostData: Omit<Post, 'id' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'repostsCount' | 'createdAt'>) => {
     const newPost: Post = {
@@ -900,23 +970,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetDemoData = () => {
     localStorage.clear();
-    setUsers(INITIAL_USERS);
-    setCurrentUserId('user-kwame');
-    setSchools(INITIAL_SCHOOLS);
-    setSelectedSchoolId('school-1');
-    setPosts(INITIAL_POSTS);
-    setStories(INITIAL_STORIES);
-    setReels(INITIAL_REELS);
-    setClubs(INITIAL_CLUBS);
-    setChallenges(INITIAL_CHALLENGES);
-    setEvents(INITIAL_EVENTS);
-    setOpportunities(INITIAL_OPPORTUNITIES);
-    setConversations(INITIAL_CONVERSATIONS);
-    setNotifications(INITIAL_NOTIFICATIONS);
-    setReports(INITIAL_REPORTS);
-    setFollowedUserIds(['user-ama', 'user-teacher-angela']);
-    setConnectedUserIds(['user-ama']);
-    showToast('Demo data reset to initial showcase state', 'success');
+    setUsers([]);
+    setCurrentUserId('');
+    setSchools([]);
+    setSelectedSchoolId(null);
+    setPosts([]);
+    setStories([]);
+    setReels([]);
+    setClubs([]);
+    setChallenges([]);
+    setEvents([]);
+    setOpportunities([]);
+    setConversations([]);
+    setNotifications([]);
+    setReports([]);
+    setFollowedUserIds([]);
+    setConnectedUserIds([]);
+    showToast('Local application storage cleared.', 'info');
   };
 
   return (
@@ -933,9 +1003,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         schools,
         selectedSchoolId,
         setSelectedSchoolId,
+        addSchool,
         activeSchool,
         posts,
         createPost,
+        deletePost,
         likePost,
         repostPost,
         comments,

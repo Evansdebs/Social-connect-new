@@ -26,87 +26,10 @@ import {
   School,
   ReportItem
 } from '../types';
-import {
-  INITIAL_POSTS,
-  INITIAL_USERS,
-  INITIAL_SCHOOLS,
-  INITIAL_STORIES,
-  INITIAL_REELS,
-  INITIAL_CLUBS,
-  INITIAL_CHALLENGES,
-  INITIAL_EVENTS,
-  INITIAL_OPPORTUNITIES,
-  INITIAL_CONVERSATIONS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_REPORTS
-} from '../data/initialData';
 
-// Sync seed data to Firestore if collections are empty
-export async function seedFirestoreInitialData() {
-  try {
-    const postsCol = collection(db, 'posts');
-    const snap = await getDocs(query(postsCol, limit(1)));
-    if (snap.empty) {
-      console.log('Bootstrapping initial demo data to Firestore...');
-      // Seed posts
-      for (const p of INITIAL_POSTS) {
-        await setDoc(doc(db, 'posts', p.id), {
-          ...p,
-          timestamp: Date.now()
-        });
-      }
-      // Seed schools
-      for (const s of INITIAL_SCHOOLS) {
-        await setDoc(doc(db, 'schools', s.id), s);
-      }
-      // Seed users
-      for (const u of INITIAL_USERS) {
-        await setDoc(doc(db, 'users', u.id), u);
-      }
-      // Seed clubs
-      for (const c of INITIAL_CLUBS) {
-        await setDoc(doc(db, 'clubs', c.id), c);
-      }
-      // Seed stories
-      for (const st of INITIAL_STORIES) {
-        await setDoc(doc(db, 'stories', st.id), {
-          ...st,
-          timestamp: Date.now()
-        });
-      }
-      // Seed reels
-      for (const r of INITIAL_REELS) {
-        await setDoc(doc(db, 'reels', r.id), r);
-      }
-      // Seed challenges
-      for (const ch of INITIAL_CHALLENGES) {
-        await setDoc(doc(db, 'challenges', ch.id), ch);
-      }
-      // Seed events
-      for (const ev of INITIAL_EVENTS) {
-        await setDoc(doc(db, 'events', ev.id), ev);
-      }
-      // Seed opportunities
-      for (const opp of INITIAL_OPPORTUNITIES) {
-        await setDoc(doc(db, 'opportunities', opp.id), opp);
-      }
-      // Seed conversations
-      for (const conv of INITIAL_CONVERSATIONS) {
-        await setDoc(doc(db, 'conversations', conv.id), conv);
-      }
-      // Seed notifications
-      for (const notif of INITIAL_NOTIFICATIONS) {
-        await setDoc(doc(db, 'notifications', notif.id), notif);
-      }
-      // Seed reports
-      for (const rep of INITIAL_REPORTS) {
-        await setDoc(doc(db, 'reports', rep.id), rep);
-      }
-      console.log('Initial Firestore seed complete!');
-    }
-  } catch (err) {
-    console.warn('Firebase seed notice (using local offline fallback):', err);
-  }
+// No seeded dummy data - production relies solely on real user accounts and creations
+export async function seedFirestoreInitialData(): Promise<void> {
+  // Intentionally empty: do not seed any dummy users, posts, or content
 }
 
 // -------------------------------------------------------------
@@ -119,18 +42,16 @@ export function subscribeToPosts(onUpdate: (posts: Post[]) => void) {
     return onSnapshot(
       q,
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: Post[] = [];
-          snapshot.forEach((d) => {
-            list.push({ ...d.data(), id: d.id } as Post);
-          });
-          list.sort((a, b) => {
-            const timeA = (a as any).timestamp || 0;
-            const timeB = (b as any).timestamp || 0;
-            return timeB - timeA;
-          });
-          onUpdate(list);
-        }
+        const list: Post[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Post);
+        });
+        list.sort((a, b) => {
+          const timeA = (a as any).timestamp || 0;
+          const timeB = (b as any).timestamp || 0;
+          return timeB - timeA;
+        });
+        onUpdate(list);
       },
       (error) => {
         console.warn('Firestore posts snapshot warning:', error);
@@ -148,18 +69,16 @@ export function subscribeToStories(onUpdate: (stories: Story[]) => void) {
     return onSnapshot(
       q,
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: Story[] = [];
-          snapshot.forEach((d) => {
-            list.push({ ...d.data(), id: d.id } as Story);
-          });
-          list.sort((a, b) => {
-            const timeA = (a as any).timestamp || 0;
-            const timeB = (b as any).timestamp || 0;
-            return timeB - timeA;
-          });
-          onUpdate(list);
-        }
+        const list: Story[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Story);
+        });
+        list.sort((a, b) => {
+          const timeA = (a as any).timestamp || 0;
+          const timeB = (b as any).timestamp || 0;
+          return timeB - timeA;
+        });
+        onUpdate(list);
       },
       (error) => console.warn('Firestore stories snapshot warning:', error)
     );
@@ -174,13 +93,11 @@ export function subscribeToReels(onUpdate: (reels: Reel[]) => void) {
     return onSnapshot(
       q,
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: Reel[] = [];
-          snapshot.forEach((d) => {
-            list.push({ ...d.data(), id: d.id } as Reel);
-          });
-          onUpdate(list);
-        }
+        const list: Reel[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Reel);
+        });
+        onUpdate(list);
       },
       (error) => console.warn('Firestore reels snapshot warning:', error)
     );
@@ -195,13 +112,11 @@ export function subscribeToConversations(onUpdate: (conversations: Conversation[
     return onSnapshot(
       q,
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: Conversation[] = [];
-          snapshot.forEach((d) => {
-            list.push({ ...d.data(), id: d.id } as Conversation);
-          });
-          onUpdate(list);
-        }
+        const list: Conversation[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Conversation);
+        });
+        onUpdate(list);
       },
       (error) => console.warn('Firestore conversations snapshot warning:', error)
     );
@@ -216,15 +131,89 @@ export function subscribeToComments(onUpdate: (comments: Comment[]) => void) {
     return onSnapshot(
       q,
       (snapshot) => {
-        if (!snapshot.empty) {
-          const list: Comment[] = [];
-          snapshot.forEach((d) => {
-            list.push({ ...d.data(), id: d.id } as Comment);
-          });
-          onUpdate(list);
-        }
+        const list: Comment[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Comment);
+        });
+        onUpdate(list);
       },
       (error) => console.warn('Firestore comments snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToSchools(onUpdate: (schools: School[]) => void) {
+  try {
+    const q = query(collection(db, 'schools'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: School[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as School);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore schools snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToClubs(onUpdate: (clubs: GroupClub[]) => void) {
+  try {
+    const q = query(collection(db, 'clubs'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: GroupClub[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as GroupClub);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore clubs snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToEvents(onUpdate: (events: CampusEvent[]) => void) {
+  try {
+    const q = query(collection(db, 'events'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: CampusEvent[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as CampusEvent);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore events snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToUsers(onUpdate: (users: User[]) => void) {
+  try {
+    const q = query(collection(db, 'users'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: User[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as User);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore users snapshot warning:', error)
     );
   } catch (e) {
     return () => {};
@@ -353,6 +342,30 @@ export async function saveReportToFirebase(report: ReportItem) {
     await setDoc(doc(db, 'reports', report.id), report);
   } catch (err) {
     console.warn('saveReportToFirebase fallback:', err);
+  }
+}
+
+export async function saveSchoolToFirebase(school: School) {
+  try {
+    await setDoc(doc(db, 'schools', school.id), school);
+  } catch (err) {
+    console.warn('saveSchoolToFirebase fallback:', err);
+  }
+}
+
+export async function saveClubToFirebase(club: GroupClub) {
+  try {
+    await setDoc(doc(db, 'clubs', club.id), club);
+  } catch (err) {
+    console.warn('saveClubToFirebase fallback:', err);
+  }
+}
+
+export async function saveChallengeToFirebase(challenge: Challenge) {
+  try {
+    await setDoc(doc(db, 'challenges', challenge.id), challenge);
+  } catch (err) {
+    console.warn('saveChallengeToFirebase fallback:', err);
   }
 }
 

@@ -238,33 +238,43 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
 
           {/* User Persona Switcher & Profile Dropdown */}
           <div className="relative">
-            <button
-              id="user-persona-toggle-btn"
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full border border-neutral-200 hover:border-neutral-300 bg-neutral-50 hover:bg-neutral-100 transition-all"
-            >
-              <img
-                src={currentUser.avatar}
-                alt={currentUser.name}
-                className="w-7 h-7 rounded-full object-cover border border-blue-500/40"
-              />
-              <span className="hidden sm:inline text-xs font-semibold text-neutral-800 max-w-[100px] truncate">
-                {currentUser.name}
-              </span>
-              <span
-                className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                  currentUser.role === 'school_admin'
-                    ? 'bg-amber-100 text-amber-800'
-                    : currentUser.role === 'platform_admin'
-                    ? 'bg-rose-100 text-rose-800'
-                    : currentUser.role === 'teacher'
-                    ? 'bg-purple-100 text-purple-800'
-                    : 'bg-blue-100 text-blue-800'
-                }`}
+            {!isFirebaseAuthActive && currentUser.id === 'guest' ? (
+              <button
+                onClick={() => openModal('auth')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors"
               >
-                {currentUser.role.replace('_', ' ')}
-              </span>
-            </button>
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </button>
+            ) : (
+              <button
+                id="user-persona-toggle-btn"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 rounded-full border border-neutral-200 hover:border-neutral-300 bg-neutral-50 hover:bg-neutral-100 transition-all"
+              >
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-7 h-7 rounded-full object-cover border border-blue-500/40"
+                />
+                <span className="hidden sm:inline text-xs font-semibold text-neutral-800 max-w-[100px] truncate">
+                  {currentUser.name}
+                </span>
+                <span
+                  className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                    currentUser.role === 'school_admin'
+                      ? 'bg-amber-100 text-amber-800'
+                      : currentUser.role === 'platform_admin'
+                      ? 'bg-rose-100 text-rose-800'
+                      : currentUser.role === 'teacher'
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}
+                >
+                  {currentUser.role.replace('_', ' ')}
+                </span>
+              </button>
+            )}
 
             {/* Persona Switcher Dropdown */}
             {showUserMenu && (
@@ -278,7 +288,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                       </span>
                     ) : (
                       <span className="text-[10px] bg-neutral-150 text-neutral-600 font-semibold px-1.5 py-0.5 rounded">
-                        Demo Persona
+                        {currentUser.id === 'guest' ? 'Guest' : 'Local User'}
                       </span>
                     )}
                   </div>
@@ -304,7 +314,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                       className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
-                      <span>Sign Out of Firebase</span>
+                      <span>Sign Out</span>
                     </button>
                   ) : (
                     <button
@@ -315,7 +325,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                       className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-2 transition-colors"
                     >
                       <LogIn className="w-4 h-4" />
-                      <span>Sign In / Create Cloud Account</span>
+                      <span>Sign In / Create Account</span>
                     </button>
                   )}
                 </div>
@@ -358,41 +368,43 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                   )}
                 </div>
 
-                {/* Switch Persona Options */}
-                <div className="p-1">
-                  <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                    Switch Test Persona
-                  </p>
-                  {users.map((u) => (
-                    <button
-                      key={u.id}
-                      onClick={() => {
-                        switchUser(u.id);
-                        setShowUserMenu(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
-                        u.id === currentUser.id
-                          ? 'bg-blue-50 text-blue-700 font-semibold'
-                          : 'text-neutral-700 hover:bg-neutral-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <img
-                          src={u.avatar}
-                          alt={u.name}
-                          className="w-6 h-6 rounded-full object-cover shrink-0"
-                        />
-                        <div className="truncate text-left">
-                          <p className="truncate font-medium">{u.name}</p>
-                          <p className="text-[10px] text-neutral-400 truncate">
-                            {u.role.replace('_', ' ')} • {u.schoolName || 'Platform'}
-                          </p>
+                {/* Switch Profile Options - Only if multiple profiles exist */}
+                {users.length > 1 && (
+                  <div className="p-1">
+                    <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
+                      Switch Profile
+                    </p>
+                    {users.map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => {
+                          switchUser(u.id);
+                          setShowUserMenu(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                          u.id === currentUser.id
+                            ? 'bg-blue-50 text-blue-700 font-semibold'
+                            : 'text-neutral-700 hover:bg-neutral-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <img
+                            src={u.avatar}
+                            alt={u.name}
+                            className="w-6 h-6 rounded-full object-cover shrink-0"
+                          />
+                          <div className="truncate text-left">
+                            <p className="truncate font-medium">{u.name}</p>
+                            <p className="text-[10px] text-neutral-400 truncate">
+                              {u.role.replace('_', ' ')} • {u.schoolName || 'Platform'}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      {u.id === currentUser.id && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                    </button>
-                  ))}
-                </div>
+                        {u.id === currentUser.id && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Reset Data */}
                 <div className="pt-2 mt-1 border-t border-neutral-100 px-2">
@@ -404,7 +416,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                     className="w-full text-left px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg flex items-center gap-2"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Reset Showcase Data</span>
+                    <span>Clear Local Cache</span>
                   </button>
                 </div>
               </div>

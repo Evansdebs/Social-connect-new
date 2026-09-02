@@ -65,7 +65,7 @@ export const CreatePostCard: React.FC = () => {
       text: text.trim(),
       mediaUrls: mediaUrl.trim() ? [mediaUrl.trim()] : undefined,
       allowDownloads,
-      tags: tags.length ? tags : ['CampusConnect', currentUser.schoolName.replace(/\s+/g, '')],
+      tags: tags.length ? tags : ['CampusConnect', (currentUser.schoolName || 'Campus').replace(/\s+/g, '')],
       schoolId: currentUser.schoolId,
       isOfficialAnnouncement: currentUser.role === 'school_admin'
     });
@@ -80,7 +80,7 @@ export const CreatePostCard: React.FC = () => {
   const handleGenerateAiCaption = async () => {
     setIsAiLoading(true);
     try {
-      const topic = text.trim() || `${currentUser.schoolName} campus activity`;
+      const topic = text.trim() || `${currentUser.schoolName || 'Campus'} community update`;
       const res = await fetch('/api/ai/caption', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

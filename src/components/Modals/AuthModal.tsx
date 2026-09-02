@@ -22,16 +22,15 @@ import {
   GoogleAuthProvider,
   updateProfile
 } from 'firebase/auth';
-import { saveUserToFirebase, getUserFromFirebase } from '../../lib/firestoreService';
-import { User, UserRole } from '../../types';
+import { saveUserToFirebase, getUserFromFirebase, saveSchoolToFirebase } from '../../lib/firestoreService';
+import { User, UserRole, School } from '../../types';
 
 export const AuthModal: React.FC = () => {
   const {
     closeModal,
     showToast,
     schools,
-    users,
-    switchUser,
+    addSchool,
     setAuthUser
   } = useApp();
 
@@ -41,12 +40,13 @@ export const AuthModal: React.FC = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [role, setRole] = useState<UserRole>('student');
-  const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || 'school-1');
+  const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || 'custom');
+  const [customSchoolName, setCustomSchoolName] = useState('');
   const [classLevel, setClassLevel] = useState('Senior Secondary (Year 12)');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const selectedSchool = schools.find((s) => s.id === selectedSchoolId) || schools[0];
+  const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +62,8 @@ export const AuthModal: React.FC = () => {
         let userProfile = await getUserFromFirebase(fbUser.uid);
         if (!userProfile) {
           // If no profile exists yet, create one
+          const defaultSchoolName = selectedSchool?.name || 'General Campus';
+          const defaultSchoolId = selectedSchool?.id || 'school-general';
           userProfile = {
             id: fbUser.uid,
             name: fbUser.displayName || email.split('@')[0],
@@ -71,8 +73,8 @@ export const AuthModal: React.FC = () => {
             avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
             coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
             bio: 'Student at Campus Connect',
-            schoolId: selectedSchool.id,
-            schoolName: selectedSchool.name,
+            schoolId: defaultSchoolId,
+            schoolName: defaultSchoolName,
             classLevel: 'Senior Year',
             interests: ['Academics', 'Campus Life'],
             creatorTalents: [],
@@ -100,6 +102,38 @@ export const AuthModal: React.FC = () => {
           return;
         }
 
+        let finalSchoolId = selectedSchool?.id;
+        let finalSchoolName = selectedSchool?.name;
+
+        if (!finalSchoolId || selectedSchoolId === 'custom') {
+          const sName = customSchoolName.trim() || 'My Campus';
+          finalSchoolId = `school-${Date.now()}`;
+          finalSchoolName = sName;
+
+          const newSchool: School = {
+            id: finalSchoolId,
+            name: sName,
+            username: sName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            location: 'Main Campus',
+            region: 'Regional Campus',
+            website: 'https://campusconnect.edu',
+            established: new Date().getFullYear(),
+            studentCount: 1,
+            followersCount: 1,
+            logo: `https://api.dicebear.com/7.x/identicon/svg?seed=${finalSchoolId}`,
+            coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+            description: `Official Campus Connect community for ${sName}`,
+            motto: 'Knowledge, Integrity & Excellence',
+            isVerified: true,
+            rankings: {
+              activeRank: schools.length + 1,
+              challengeWins: 0,
+              popularityScore: 90
+            }
+          };
+          addSchool(newSchool);
+        }
+
         const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         const fbUser = userCred.user;
 
@@ -114,14 +148,14 @@ export const AuthModal: React.FC = () => {
           email: fbUser.email || email.trim(),
           role: role,
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
-          coverImage: selectedSchool.coverImage || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-          bio: `${role === 'student' ? 'Student' : role === 'teacher' ? 'Faculty Teacher' : 'Campus Administrator'} at ${selectedSchool.name}. Passionate about learning and collaboration!`,
-          schoolId: selectedSchool.id,
-          schoolName: selectedSchool.name,
+          coverImage: selectedSchool?.coverImage || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+          bio: `${role === 'student' ? 'Student' : role === 'teacher' ? 'Faculty Teacher' : 'Campus Administrator'} at ${finalSchoolName}. Passionate about learning and collaboration!`,
+          schoolId: finalSchoolId,
+          schoolName: finalSchoolName,
           classLevel: classLevel.trim(),
           interests: ['Academics', 'Campus Life', 'Leadership'],
           creatorTalents: ['Student Leadership'],
-          badges: ['New Member', selectedSchool.name],
+          badges: ['New Member', finalSchoolName],
           followersCount: 0,
           followingCount: 0,
           connectionsCount: 0,
@@ -165,6 +199,8 @@ export const AuthModal: React.FC = () => {
 
       let userProfile = await getUserFromFirebase(fbUser.uid);
       if (!userProfile) {
+        const defaultSchoolName = selectedSchool?.name || 'General Campus';
+        const defaultSchoolId = selectedSchool?.id || 'school-general';
         userProfile = {
           id: fbUser.uid,
           name: fbUser.displayName || 'Campus Member',
@@ -174,8 +210,8 @@ export const AuthModal: React.FC = () => {
           avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${fbUser.uid}`,
           coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
           bio: 'Campus Connect student member',
-          schoolId: selectedSchool.id,
-          schoolName: selectedSchool.name,
+          schoolId: defaultSchoolId,
+          schoolName: defaultSchoolName,
           classLevel: 'Year 12',
           interests: ['Campus Life', 'Tech'],
           creatorTalents: [],
@@ -197,7 +233,9 @@ export const AuthModal: React.FC = () => {
       closeModal();
     } catch (err: any) {
       console.warn('Google sign-in exception:', err);
-      setErrorMsg(err.message || 'Google sign-in could not be completed.');
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setErrorMsg(err.message || 'Google sign-in could not be completed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -347,9 +385,27 @@ export const AuthModal: React.FC = () => {
                           {s.name}
                         </option>
                       ))}
+                      <option value="custom">+ Register School</option>
                     </select>
                   </div>
                 </div>
+
+                {(schools.length === 0 || selectedSchoolId === 'custom') && (
+                  <div>
+                    <label className="font-bold text-neutral-700 block mb-1">Campus / Institution Name</label>
+                    <div className="relative">
+                      <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                      <input
+                        type="text"
+                        required
+                        value={customSchoolName}
+                        onChange={(e) => setCustomSchoolName(e.target.value)}
+                        placeholder="e.g., University of Ghana or Achimota School"
+                        className="w-full pl-9 pr-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="font-bold text-neutral-700 block mb-1">Grade / Level</label>
@@ -412,38 +468,6 @@ export const AuthModal: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* Instant Test Personas */}
-          <div className="pt-3 border-t border-neutral-100">
-            <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider mb-2">
-              Or Fast-Switch Demo Persona
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {users.slice(0, 4).map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => {
-                    switchUser(u.id);
-                    closeModal();
-                  }}
-                  className="p-2 border border-neutral-200 hover:border-blue-300 hover:bg-blue-50/50 rounded-xl text-left flex items-center gap-2 transition-colors"
-                >
-                  <img
-                    src={u.avatar}
-                    alt={u.name}
-                    className="w-7 h-7 rounded-full object-cover shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="font-bold text-[11px] text-neutral-900 truncate">{u.name}</p>
-                    <p className="text-[10px] text-neutral-500 truncate capitalize">
-                      {u.role.replace('_', ' ')}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>

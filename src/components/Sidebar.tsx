@@ -124,7 +124,7 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
       </nav>
 
       {/* "My School" Quick Card */}
-      {activeSchool && (
+      {activeSchool ? (
         <div className="bg-gradient-to-br from-blue-900 to-indigo-950 text-white rounded-2xl p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
           <div className="flex items-center gap-3 mb-2.5">
@@ -168,6 +168,23 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
           >
             <span>Visit Official School Page</span>
             <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs text-center">
+          <Building2 className="w-8 h-8 text-neutral-400 mx-auto mb-1.5" />
+          <p className="font-bold text-xs text-neutral-800">Campus Hub</p>
+          <p className="text-[11px] text-neutral-500 mb-2.5">
+            Connect your high school or university to access school rankings, announcements & events.
+          </p>
+          <button
+            onClick={() => {
+              setActiveTab('schools');
+              if (onCloseMobileMenu) onCloseMobileMenu();
+            }}
+            className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-xl transition-colors w-full"
+          >
+            Browse & Register Schools
           </button>
         </div>
       )}
