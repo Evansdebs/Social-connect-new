@@ -24,7 +24,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { saveUserToFirebase, getUserFromFirebase, saveSchoolToFirebase } from '../../lib/firestoreService';
 import { User, UserRole, UserType, School } from '../../types';
@@ -46,12 +47,40 @@ export const LoginView: React.FC = () => {
   const [classLevel, setClassLevel] = useState('Senior Secondary (Year 12)');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSuccessNotice, setResetSuccessNotice] = useState<string | null>(null);
 
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setErrorMsg('Please enter your email address above to receive a password reset link.');
+      return;
+    }
+    setResetLoading(true);
+    setErrorMsg(null);
+    setResetSuccessNotice(null);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSuccessNotice(`Password reset instructions sent to ${email.trim()}! Please check your inbox or spam folder.`);
+      showToast('Password reset link sent to your email!', 'success');
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        setErrorMsg('No registered account was found with this email address.');
+      } else if (err.code === 'auth/invalid-email') {
+        setErrorMsg('Please enter a valid email address format.');
+      } else {
+        setErrorMsg('Could not send reset email. Please try again.');
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setResetSuccessNotice(null);
     setLoading(true);
 
     try {
@@ -105,7 +134,60 @@ export const LoginView: React.FC = () => {
         let finalSchoolId = selectedSchool?.id || '';
         let finalSchoolName = selectedSchool?.name || (requestedSchoolNotice ? `Pending Approval: ${requestedSchoolNotice}` : 'Independent Member');
 
-        const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        let userCred;
+        try {
+          userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        } catch (createErr: any) {
+          if (createErr.code === 'auth/email-already-in-use') {
+            // Email is already in use. Attempt graceful sign-in with the provided password
+            try {
+              const signInCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+              const existingFbUser = signInCred.user;
+              let existingProfile = await getUserFromFirebase(existingFbUser.uid);
+              if (!existingProfile) {
+                existingProfile = {
+                  id: existingFbUser.uid,
+                  name: existingFbUser.displayName || name.trim() || email.split('@')[0],
+                  username: (existingFbUser.displayName || name.trim() || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '_'),
+                  email: existingFbUser.email || email.trim(),
+                  role: 'user',
+                  userType: userType,
+                  accountStatus: 'active',
+                  avatar: existingFbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${existingFbUser.uid}`,
+                  coverImage: selectedSchool?.coverImage || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+                  bio: `Member at ${finalSchoolName}. Ready to collaborate and connect!`,
+                  schoolId: finalSchoolId,
+                  schoolName: finalSchoolName,
+                  classLevel: classLevel.trim(),
+                  interests: ['Academics', 'Campus Life', 'Student Clubs'],
+                  creatorTalents: ['Leadership'],
+                  badges: ['Verified Member', finalSchoolName],
+                  followersCount: 0,
+                  followingCount: 0,
+                  connectionsCount: 0,
+                  isVerified: false,
+                  isPrivate: false,
+                  allowDownloads: true,
+                  whoCanMessage: 'everyone',
+                  whoCanConnect: 'everyone'
+                };
+                await saveUserToFirebase(existingProfile);
+              }
+              setAuthUser(existingProfile);
+              showToast(`Welcome back, ${existingProfile.name}! Signed into your existing account.`, 'success');
+              setLoading(false);
+              return;
+            } catch (authSignInErr: any) {
+              // Password didn't match existing account or needs reset
+              setMode('signin');
+              setErrorMsg('An account with this email already exists. Please enter your existing password to sign in, or click "Forgot password" below.');
+              setLoading(false);
+              return;
+            }
+          }
+          throw createErr;
+        }
+
         const fbUser = userCred.user;
 
         await updateProfile(fbUser, {
@@ -144,14 +226,27 @@ export const LoginView: React.FC = () => {
         showToast(`Account created for ${newProfile.name}! Welcome to Campus Connect.`, 'success');
       }
     } catch (err: any) {
-      console.error('Firebase Auth error:', err);
+      const standardAuthCodes = [
+        'auth/email-already-in-use',
+        'auth/invalid-credential',
+        'auth/wrong-password',
+        'auth/user-not-found',
+        'auth/weak-password',
+        'auth/invalid-email',
+        'auth/popup-closed-by-user',
+        'auth/cancelled-popup-request'
+      ];
+      if (!standardAuthCodes.includes(err?.code)) {
+        console.warn('Firebase Auth notice:', err);
+      }
+
       let message = err.message || 'Authentication failed';
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        message = 'Invalid email or password.';
+        message = 'Invalid email or password. Please verify your credentials or reset your password.';
       } else if (err.code === 'auth/user-not-found') {
         message = 'No account found with this email. Please register first.';
       } else if (err.code === 'auth/email-already-in-use') {
-        message = 'An account with this email already exists. Try signing in.';
+        message = 'An account with this email already exists. Please sign in instead.';
       } else if (err.code === 'auth/weak-password') {
         message = 'Password should be at least 6 characters.';
       } else if (err.code === 'auth/invalid-email') {
@@ -362,11 +457,43 @@ export const LoginView: React.FC = () => {
               </button>
             </div>
 
+            {/* Success Notice for Password Reset */}
+            {resetSuccessNotice && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs flex items-start gap-2 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                <span className="font-medium">{resetSuccessNotice}</span>
+              </div>
+            )}
+
             {/* Error Banner */}
             {errorMsg && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs flex items-start gap-2 animate-in fade-in duration-200">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                <span className="font-medium">{errorMsg}</span>
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs flex flex-col gap-2 animate-in fade-in duration-200">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                  <span className="font-medium flex-1">{errorMsg}</span>
+                </div>
+                {errorMsg.toLowerCase().includes('already exists') && (
+                  <div className="flex items-center gap-2 pt-1 border-t border-rose-200/60 pl-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('signin');
+                        setErrorMsg('Please enter your password to sign in to this account.');
+                      }}
+                      className="px-2.5 py-1 bg-neutral-900 text-white font-bold rounded-lg text-[11px] hover:bg-neutral-800 cursor-pointer shadow-xs transition-colors"
+                    >
+                      Sign In to this Account
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePasswordReset}
+                      disabled={resetLoading}
+                      className="px-2.5 py-1 bg-white text-neutral-700 border border-neutral-300 font-bold rounded-lg text-[11px] hover:bg-neutral-50 cursor-pointer transition-colors"
+                    >
+                      {resetLoading ? 'Sending...' : 'Reset Password'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -526,7 +653,17 @@ export const LoginView: React.FC = () => {
               </div>
 
               <div>
-                <label className="font-bold text-neutral-700 block mb-1">Password *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-neutral-700 block">Password *</label>
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    disabled={resetLoading}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer disabled:opacity-50"
+                  >
+                    {resetLoading ? 'Sending link...' : 'Forgot password?'}
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                   <input
