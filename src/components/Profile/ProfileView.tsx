@@ -14,23 +14,36 @@ import {
   Download,
   CheckCircle,
   Share2,
-  Sparkles
+  Sparkles,
+  UserCheck,
+  Check,
+  X,
+  Clock,
+  UserX
 } from 'lucide-react';
 import { PostCard } from '../Feed/PostCard';
 
 export const ProfileView: React.FC = () => {
   const {
     currentUser,
+    users,
     posts,
     reels,
     savedPostIds,
     openModal,
     showToast,
-    updateCurrentUserProfile
+    updateCurrentUserProfile,
+    connectedUserIds,
+    incomingConnectionRequests,
+    sentConnectionRequestUserIds,
+    acceptConnectionRequest,
+    declineConnectionRequest,
+    cancelConnectionRequest,
+    removeConnection
   } = useApp();
 
   const [activeProfileTab, setActiveProfileTab] = useState<
-    'posts' | 'media' | 'reels' | 'reposts' | 'saved' | 'badges'
+    'posts' | 'media' | 'reels' | 'reposts' | 'saved' | 'badges' | 'connections'
   >('posts');
 
   const [showSettingsDrawer, setShowSettingsDrawer] = useState(false);
@@ -177,6 +190,11 @@ export const ProfileView: React.FC = () => {
             { id: 'posts', label: `Posts (${myPosts.length})`, icon: FileText },
             { id: 'media', label: `Media (${myMediaPosts.length})`, icon: ImageIcon },
             { id: 'reels', label: `Reels (${myReels.length})`, icon: Film },
+            {
+              id: 'connections',
+              label: `Connected Friends (${connectedUserIds.length})`,
+              icon: UserCheck
+            },
             { id: 'reposts', label: `Reposts (${myReposts.length})`, icon: Repeat },
             { id: 'saved', label: `Saved (${mySavedPosts.length})`, icon: Bookmark },
             { id: 'badges', label: `Badges (${currentUser.badges.length})`, icon: Award }
@@ -363,6 +381,175 @@ export const ProfileView: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Tab: Connected Friends & Connection Requests */}
+      {activeProfileTab === 'connections' && (
+        <div className="space-y-5">
+          {/* Pending Incoming Requests */}
+          {incomingConnectionRequests.length > 0 && (
+            <div className="bg-white rounded-2xl border border-blue-200 p-4 sm:p-5 shadow-xs">
+              <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
+                <span>Pending Connection Requests ({incomingConnectionRequests.length})</span>
+              </h3>
+              <p className="text-xs text-neutral-500 mb-4">
+                These students want to connect with you. Accept their request to become connected friends.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {incomingConnectionRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="p-3.5 bg-blue-50/50 rounded-xl border border-blue-100 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={req.fromUser.avatar}
+                        alt={req.fromUser.name}
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-neutral-900 truncate">
+                          {req.fromUser.name}
+                        </p>
+                        <p className="text-[10px] text-blue-700 truncate font-semibold">
+                          🏫 {req.fromUser.school || 'Campus Connect'}
+                        </p>
+                        <p className="text-[10px] text-neutral-400 truncate">
+                          Sent {req.sentAt}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => acceptConnectionRequest(req.id)}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1 transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Accept
+                      </button>
+                      <button
+                        onClick={() => declineConnectionRequest(req.id)}
+                        className="px-2.5 py-1.5 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-semibold text-xs rounded-lg flex items-center transition-colors"
+                        title="Decline"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pending Sent Requests */}
+          {sentConnectionRequestUserIds.length > 0 && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-4 sm:p-5 shadow-xs">
+              <h3 className="text-sm font-bold text-neutral-900 mb-2 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span>Sent Requests Awaiting Acceptance ({sentConnectionRequestUserIds.length})</span>
+              </h3>
+              <p className="text-xs text-neutral-500 mb-3">
+                You sent connection requests to these users. They must accept before you become connected friends.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {sentConnectionRequestUserIds.map((targetId) => {
+                  const targetUser = users.find((u) => u.id === targetId);
+                  if (!targetUser) return null;
+                  return (
+                    <div
+                      key={targetId}
+                      className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img
+                          src={targetUser.avatar}
+                          alt={targetUser.name}
+                          className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-bold text-xs text-neutral-900 truncate">
+                            {targetUser.name}
+                          </p>
+                          <p className="text-[10px] text-neutral-500 truncate">
+                            {targetUser.schoolName}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => cancelConnectionRequest(targetId)}
+                        className="px-2.5 py-1 text-xs text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg flex items-center gap-1 transition-colors"
+                        title="Cancel Request"
+                      >
+                        <Clock className="w-3 h-3 text-amber-600" />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Active Connected Friends */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-4 sm:p-5 shadow-xs">
+            <h3 className="text-sm font-bold text-neutral-900 mb-3 flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-emerald-600" />
+              <span>Connected Friends ({connectedUserIds.length})</span>
+            </h3>
+
+            {connectedUserIds.length === 0 ? (
+              <div className="text-center py-8 text-neutral-400 text-xs">
+                You do not have any connected friends yet. Send connection requests from the Feed, Discover, or right sidebar to connect with other students!
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {connectedUserIds.map((userId) => {
+                  const friend = users.find((u) => u.id === userId);
+                  if (!friend) return null;
+                  return (
+                    <div
+                      key={friend.id}
+                      className="p-3.5 bg-neutral-50/70 rounded-xl border border-neutral-200 flex flex-col justify-between gap-3"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <img
+                          src={friend.avatar}
+                          alt={friend.name}
+                          className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-bold text-xs text-neutral-900 truncate">
+                            {friend.name}
+                          </p>
+                          <p className="text-[10px] text-neutral-500 truncate">
+                            @{friend.username}
+                          </p>
+                          <p className="text-[10px] text-blue-600 font-semibold truncate">
+                            🏫 {friend.schoolName}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-neutral-200/60">
+                        <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          Connected Friend
+                        </span>
+                        <button
+                          onClick={() => removeConnection(friend.id)}
+                          className="text-[10px] text-neutral-400 hover:text-rose-600 font-medium transition-colors"
+                          title="Remove Friend Connection"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

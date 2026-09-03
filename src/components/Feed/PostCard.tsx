@@ -49,6 +49,11 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   };
 
   const handleReaction = (reaction: 'like' | 'love' | 'funny' | 'celebrate' | 'wow') => {
+    if (post.likedByUser) {
+      showToast('You have already liked this post. Each post can only be liked once.', 'info');
+      setShowReactionPicker(false);
+      return;
+    }
     likePost(post.id, reaction);
     setShowReactionPicker(false);
   };
@@ -323,13 +328,24 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         <div className="relative">
           <button
             id={`like-post-btn-${post.id}`}
-            onClick={() => likePost(post.id)}
-            onMouseEnter={() => setShowReactionPicker(true)}
+            onClick={() => {
+              if (post.likedByUser) {
+                showToast('You have already liked this post. Each post can only be liked once.', 'info');
+                return;
+              }
+              likePost(post.id);
+            }}
+            onMouseEnter={() => {
+              if (!post.likedByUser) {
+                setShowReactionPicker(true);
+              }
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               post.likedByUser
-                ? 'text-rose-600 bg-rose-50'
+                ? 'text-rose-600 bg-rose-50 cursor-default'
                 : 'text-neutral-600 hover:bg-neutral-100'
             }`}
+            title={post.likedByUser ? 'You have already liked this post' : 'Like'}
           >
             <Heart className={`w-4 h-4 ${post.likedByUser ? 'fill-current text-rose-600' : ''}`} />
             <span>
@@ -342,7 +358,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           </button>
 
           {/* Hover Reaction Popup */}
-          {showReactionPicker && (
+          {showReactionPicker && !post.likedByUser && (
             <div
               onMouseLeave={() => setShowReactionPicker(false)}
               className="absolute bottom-full left-0 mb-1 bg-white rounded-full shadow-lg border border-neutral-200 px-2 py-1 flex items-center gap-2 z-20 animate-in fade-in zoom-in-90 duration-100"

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Trophy, TrendingUp, UserPlus, Check, Flame, ChevronRight } from 'lucide-react';
+import { Trophy, TrendingUp, UserPlus, Check, Flame, ChevronRight, Clock, X } from 'lucide-react';
 
 export const RightSidebar: React.FC = () => {
   const {
@@ -9,7 +9,12 @@ export const RightSidebar: React.FC = () => {
     users,
     currentUser,
     connectedUserIds,
+    sentConnectionRequestUserIds,
+    incomingConnectionRequests,
     requestConnection,
+    acceptConnectionRequest,
+    declineConnectionRequest,
+    cancelConnectionRequest,
     setActiveTab,
     setSearchQuery,
     posts
@@ -192,6 +197,11 @@ export const RightSidebar: React.FC = () => {
           <div className="space-y-3">
             {candidateUsers.slice(0, 3).map((user) => {
               const isConnected = connectedUserIds.includes(user.id);
+              const isPendingSent = sentConnectionRequestUserIds.includes(user.id);
+              const incomingReq = incomingConnectionRequests.find(
+                (r) => r.fromUserId === user.id
+              );
+
               return (
                 <div key={user.id} className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -209,28 +219,55 @@ export const RightSidebar: React.FC = () => {
                     </div>
                   </div>
 
-                  <button
-                    id={`connect-user-${user.id}-btn`}
-                    onClick={() => requestConnection(user.id)}
-                    className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 ${
-                      isConnected
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700'
-                    }`}
-                    title={isConnected ? 'Connected' : 'Send Connection Request'}
-                  >
-                    {isConnected ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-600" />
-                        <span className="text-[10px]">Connected</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-3 h-3" />
-                        <span className="text-[10px]">Connect</span>
-                      </>
-                    )}
-                  </button>
+                  {isConnected ? (
+                    <span
+                      className="p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
+                      title="Connected Friends"
+                    >
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span className="text-[10px]">Connected</span>
+                    </span>
+                  ) : incomingReq ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        id={`accept-conn-${user.id}-btn`}
+                        onClick={() => acceptConnectionRequest(incomingReq.id)}
+                        className="p-1.5 px-2 rounded-lg text-xs font-semibold flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs"
+                        title="Accept Connection Request"
+                      >
+                        <Check className="w-3 h-3" />
+                        <span className="text-[10px]">Accept</span>
+                      </button>
+                      <button
+                        id={`decline-conn-${user.id}-btn`}
+                        onClick={() => declineConnectionRequest(incomingReq.id)}
+                        className="p-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 transition-all"
+                        title="Decline"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : isPendingSent ? (
+                    <button
+                      id={`cancel-conn-${user.id}-btn`}
+                      onClick={() => cancelConnectionRequest(user.id)}
+                      className="p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 shrink-0 transition-all"
+                      title="Click to cancel pending connection request"
+                    >
+                      <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+                      <span className="text-[10px]">Pending</span>
+                    </button>
+                  ) : (
+                    <button
+                      id={`connect-user-${user.id}-btn`}
+                      onClick={() => requestConnection(user.id)}
+                      className="p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700"
+                      title="Send Connection Request"
+                    >
+                      <UserPlus className="w-3 h-3" />
+                      <span className="text-[10px]">Connect</span>
+                    </button>
+                  )}
                 </div>
               );
             })}

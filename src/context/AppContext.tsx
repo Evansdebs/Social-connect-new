@@ -15,7 +15,8 @@ import {
   SchoolMemoryAlbum,
   ReportItem,
   SchoolStaffRecord,
-  SchoolStaffPermissions
+  SchoolStaffPermissions,
+  ConnectionRequest
 } from '../types';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -54,7 +55,14 @@ import {
   deleteUserFromFirebase,
   deleteReelFromFirebase,
   deleteStoryFromFirebase,
-  deleteClubFromFirebase
+  deleteClubFromFirebase,
+  subscribeToNotifications,
+  saveNotificationToFirebase,
+  updateNotificationInFirebase,
+  subscribeToConnectionRequests,
+  saveConnectionRequestToFirebase,
+  updateConnectionRequestInFirebase,
+  deleteConnectionRequestFromFirebase
 } from '../lib/firestoreService';
 import {
   DEFAULT_GUEST_USER,
@@ -167,7 +175,14 @@ interface AppContextType {
   followedUserIds: string[];
   toggleFollowUser: (userId: string) => void;
   connectedUserIds: string[];
+  connectionRequests: ConnectionRequest[];
+  sentConnectionRequestUserIds: string[];
+  incomingConnectionRequests: ConnectionRequest[];
   requestConnection: (userId: string) => void;
+  acceptConnectionRequest: (requestIdOrUserId: string) => void;
+  declineConnectionRequest: (requestIdOrUserId: string) => void;
+  cancelConnectionRequest: (userId: string) => void;
+  removeConnection: (userId: string) => void;
   resetDemoData: () => void;
 }
 
@@ -235,6 +250,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [connectionRequests, setConnectionRequests] = useState<ConnectionRequest[]>(() => {
+    const saved = localStorage.getItem('cc_connection_requests');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Fix #2: Per-user like tracking stored locally — prevents likedByUser
   // being shared across all users when Firestore snapshots update the global post doc
   const [likedPostIds, setLikedPostIds] = useState<string[]>(() => {
@@ -285,6 +305,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('cc_connected_users', JSON.stringify(connectedUserIds));
   }, [connectedUserIds]);
+
+  useEffect(() => {
+    localStorage.setItem('cc_connection_requests', JSON.stringify(connectionRequests));
+  }, [connectionRequests]);
 
   useEffect(() => {
     localStorage.setItem('cc_school_staff', JSON.stringify(schoolStaff));
@@ -449,6 +473,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSchoolStaff(liveStaff);
     });
 
+    // Real-time notifications stream
+    const unsubNotifs = subscribeToNotifications((liveNotifs) => {
+      if (liveNotifs.length > 0) {
+        setNotifications((prev) => {
+          const merged = [...prev];
+          liveNotifs.forEach((n) => {
+            const idx = merged.findIndex((m) => m.id === n.id);
+            if (idx >= 0) merged[idx] = n;
+            else merged.push(n);
+          });
+          return merged;
+        });
+      }
+    });
+
+    // Real-time connection requests stream
+    const unsubReqs = subscribeToConnectionRequests((liveReqs) => {
+      if (liveReqs.length > 0) {
+        setConnectionRequests((prev) => {
+          const merged = [...prev];
+          liveReqs.forEach((r) => {
+            const idx = merged.findIndex((m) => m.id === r.id);
+            if (idx >= 0) merged[idx] = r;
+            else merged.push(r);
+          });
+          return merged;
+        });
+      }
+    });
+
     return () => {
       unsubAuth();
       unsubPosts();
@@ -461,6 +515,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubEvents();
       unsubUsers();
       unsubStaff();
+      unsubNotifs();
+      unsubReqs();
     };
   }, []);
 
@@ -653,26 +709,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Post published to Campus Connect!', 'success');
   };
 
-  // Fix #2: track per-user likes in likedPostIds (localStorage) rather than relying on
-  // the global Firestore post document's likedByUser field (which is shared across all users)
+  // A user can like a post only once. If already liked, disallow unliking or re-liking.
   const likePost = (postId: string, reaction: 'like' | 'love' | 'funny' | 'celebrate' | 'wow' = 'like') => {
-    const alreadyLiked = likedPostIds.includes(postId);
-    setLikedPostIds((prev) =>
-      alreadyLiked ? prev.filter((id) => id !== postId) : [...prev, postId]
-    );
+    const targetPost = posts.find((p) => p.id === postId);
+    const alreadyLiked =
+      likedPostIds.includes(postId) ||
+      Boolean(targetPost?.likedByUser) ||
+      Boolean(currentUser.id && targetPost?.likedUserIds?.includes(currentUser.id));
+
+    if (alreadyLiked) {
+      showToast('You have already liked this post. Each post can only be liked once.', 'info');
+      return;
+    }
+
+    setLikedPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id !== postId) return p;
-        const newCount = alreadyLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1;
-        updatePostInFirebase(postId, { likesCount: newCount });
+        const newCount = p.likesCount + 1;
+        const newLikedUserIds = Array.from(new Set([...(p.likedUserIds || []), currentUser.id]));
+        updatePostInFirebase(postId, {
+          likesCount: newCount,
+          likedUserIds: newLikedUserIds
+        });
         return {
           ...p,
-          likedByUser: !alreadyLiked,
+          likedByUser: true,
           likesCount: newCount,
-          userReaction: alreadyLiked ? undefined : reaction
+          likedUserIds: newLikedUserIds,
+          userReaction: reaction
         };
       })
     );
+    showToast('Post liked!', 'success');
   };
 
   const repostPost = (postId: string, commentText?: string) => {
@@ -1069,14 +1138,208 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const requestConnection = (userId: string) => {
-    if (connectedUserIds.includes(userId)) {
-      setConnectedUserIds((prev) => prev.filter((id) => id !== userId));
-      showToast('Connection removed', 'info');
-    } else {
-      setConnectedUserIds((prev) => [...prev, userId]);
-      showToast('Connection request sent & accepted!', 'success');
+  const sentConnectionRequestUserIds = connectionRequests
+    .filter((r) => r.fromUserId === currentUser.id && r.status === 'pending')
+    .map((r) => r.toUserId);
+
+  const incomingConnectionRequests = connectionRequests.filter(
+    (r) => r.toUserId === currentUser.id && r.status === 'pending'
+  );
+
+  const requestConnection = (targetUserId: string) => {
+    if (!currentUser.id || currentUser.id === 'guest') {
+      openModal('auth');
+      return;
     }
+
+    if (targetUserId === currentUser.id) {
+      showToast('You cannot connect with yourself.', 'info');
+      return;
+    }
+
+    if (connectedUserIds.includes(targetUserId)) {
+      showToast('You are already connected friends.', 'info');
+      return;
+    }
+
+    if (sentConnectionRequestUserIds.includes(targetUserId)) {
+      showToast('Connection request already sent. Waiting for acceptance.', 'info');
+      return;
+    }
+
+    const incoming = incomingConnectionRequests.find((r) => r.fromUserId === targetUserId);
+    if (incoming) {
+      acceptConnectionRequest(incoming.id);
+      return;
+    }
+
+    const targetUser = users.find((u) => u.id === targetUserId);
+
+    const newReq: ConnectionRequest = {
+      id: `req-${currentUser.id}-${targetUserId}-${Date.now()}`,
+      fromUserId: currentUser.id,
+      toUserId: targetUserId,
+      fromUser: {
+        id: currentUser.id,
+        name: currentUser.name,
+        username: currentUser.username,
+        avatar: currentUser.avatar,
+        school: currentUser.schoolName || ''
+      },
+      toUser: targetUser
+        ? {
+            id: targetUser.id,
+            name: targetUser.name,
+            username: targetUser.username,
+            avatar: targetUser.avatar,
+            school: targetUser.schoolName || ''
+          }
+        : undefined,
+      sentAt: 'Just now',
+      status: 'pending'
+    };
+
+    setConnectionRequests((prev) => [newReq, ...prev.filter((r) => r.id !== newReq.id)]);
+    saveConnectionRequestToFirebase(newReq);
+
+    const notif: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      type: 'connection_request',
+      senderName: currentUser.name,
+      senderAvatar: currentUser.avatar,
+      content: 'sent you a connection request.',
+      timestamp: 'Just now',
+      isRead: false,
+      requestId: newReq.id,
+      senderId: currentUser.id,
+      targetUserId: targetUserId
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    saveNotificationToFirebase(notif);
+
+    showToast(
+      `Connection request sent to ${targetUser?.name || 'user'}. They must accept it before you become connected friends.`,
+      'info'
+    );
+  };
+
+  const acceptConnectionRequest = (requestIdOrUserId: string) => {
+    const req = connectionRequests.find(
+      (r) =>
+        (r.id === requestIdOrUserId || r.fromUserId === requestIdOrUserId) &&
+        r.toUserId === currentUser.id &&
+        r.status === 'pending'
+    );
+    if (!req) {
+      const altReq = connectionRequests.find(
+        (r) => r.fromUserId === requestIdOrUserId && r.status === 'pending'
+      );
+      if (!altReq) return;
+      handleAccept(altReq);
+      return;
+    }
+    handleAccept(req);
+
+    function handleAccept(targetReq: ConnectionRequest) {
+      const partnerId = targetReq.fromUserId;
+      const partnerUser = users.find((u) => u.id === partnerId);
+
+      const updatedReq: ConnectionRequest = { ...targetReq, status: 'accepted' };
+      setConnectionRequests((prev) =>
+        prev.map((r) => (r.id === targetReq.id ? updatedReq : r))
+      );
+      updateConnectionRequestInFirebase(targetReq.id, { status: 'accepted' });
+
+      setConnectedUserIds((prev) => Array.from(new Set([...prev, partnerId])));
+
+      const newConnectionsCount = (currentUser.connectionsCount || 0) + 1;
+      updateCurrentUserProfile({ connectionsCount: newConnectionsCount });
+
+      if (partnerUser) {
+        updateUserInFirebase(partnerUser.id, {
+          connectionsCount: (partnerUser.connectionsCount || 0) + 1
+        });
+      }
+
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.requestId === targetReq.id || n.senderId === partnerId
+            ? { ...n, isRead: true }
+            : n
+        )
+      );
+
+      const confirmNotif: NotificationItem = {
+        id: `notif-acc-${Date.now()}`,
+        type: 'connection_request',
+        senderName: currentUser.name,
+        senderAvatar: currentUser.avatar,
+        content: 'accepted your connection request. You are now connected friends!',
+        timestamp: 'Just now',
+        isRead: false,
+        requestId: targetReq.id,
+        senderId: currentUser.id,
+        targetUserId: partnerId
+      };
+      saveNotificationToFirebase(confirmNotif);
+
+      showToast(
+        `Connected with ${targetReq.fromUser.name}! You are now connected friends.`,
+        'success'
+      );
+    }
+  };
+
+  const declineConnectionRequest = (requestIdOrUserId: string) => {
+    const req = connectionRequests.find(
+      (r) =>
+        (r.id === requestIdOrUserId || r.fromUserId === requestIdOrUserId) &&
+        r.toUserId === currentUser.id &&
+        r.status === 'pending'
+    );
+    if (!req) return;
+
+    const updatedReq: ConnectionRequest = { ...req, status: 'declined' };
+    setConnectionRequests((prev) =>
+      prev.map((r) => (r.id === req.id ? updatedReq : r))
+    );
+    updateConnectionRequestInFirebase(req.id, { status: 'declined' });
+
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.requestId === req.id ? { ...n, isRead: true } : n
+      )
+    );
+    showToast('Connection request declined.', 'info');
+  };
+
+  const cancelConnectionRequest = (targetUserId: string) => {
+    const req = connectionRequests.find(
+      (r) => r.fromUserId === currentUser.id && r.toUserId === targetUserId && r.status === 'pending'
+    );
+    if (req) {
+      setConnectionRequests((prev) => prev.filter((r) => r.id !== req.id));
+      deleteConnectionRequestFromFirebase(req.id);
+    }
+    showToast('Connection request cancelled.', 'info');
+  };
+
+  const removeConnection = (targetUserId: string) => {
+    setConnectedUserIds((prev) => prev.filter((id) => id !== targetUserId));
+    const newCount = Math.max(0, (currentUser.connectionsCount || 1) - 1);
+    updateCurrentUserProfile({ connectionsCount: newCount });
+
+    const existing = connectionRequests.find(
+      (r) =>
+        ((r.fromUserId === currentUser.id && r.toUserId === targetUserId) ||
+          (r.fromUserId === targetUserId && r.toUserId === currentUser.id)) &&
+        r.status === 'accepted'
+    );
+    if (existing) {
+      deleteConnectionRequestFromFirebase(existing.id);
+      setConnectionRequests((prev) => prev.filter((r) => r.id !== existing.id));
+    }
+    showToast('Connection removed.', 'info');
   };
 
   const resetDemoData = () => {
@@ -1097,6 +1360,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setReports([]);
     setFollowedUserIds([]);
     setConnectedUserIds([]);
+    setConnectionRequests([]);
     showToast('Local application storage cleared.', 'info');
   };
 
@@ -1104,7 +1368,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // This ensures likedByUser is always per-user (from localStorage) even after Firestore snapshot resets it
   const postsWithLikes = posts.map((p) => ({
     ...p,
-    likedByUser: likedPostIds.includes(p.id)
+    likedByUser:
+      likedPostIds.includes(p.id) ||
+      Boolean(currentUser.id && p.likedUserIds?.includes(currentUser.id))
   }));
 
   const reelsWithLikes = reels.map((r) => ({
@@ -1195,7 +1461,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         followedUserIds,
         toggleFollowUser,
         connectedUserIds,
+        connectionRequests,
+        sentConnectionRequestUserIds,
+        incomingConnectionRequests,
         requestConnection,
+        acceptConnectionRequest,
+        declineConnectionRequest,
+        cancelConnectionRequest,
+        removeConnection,
         resetDemoData
       }}
     >

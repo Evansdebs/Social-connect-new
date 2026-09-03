@@ -114,6 +114,7 @@ export interface Post {
   repostOf?: RepostInfo;
   likesCount: number;
   likedByUser: boolean;
+  likedUserIds?: string[];
   userReaction?: 'like' | 'love' | 'funny' | 'celebrate' | 'wow';
   commentsCount: number;
   sharesCount: number;
@@ -272,7 +273,16 @@ export interface Conversation {
 
 export interface ConnectionRequest {
   id: string;
+  fromUserId: string;
+  toUserId: string;
   fromUser: {
+    id: string;
+    name: string;
+    username: string;
+    avatar: string;
+    school: string;
+  };
+  toUser?: {
     id: string;
     name: string;
     username: string;
@@ -292,6 +302,9 @@ export interface NotificationItem {
   timestamp: string;
   isRead: boolean;
   targetLink?: string;
+  targetUserId?: string;
+  requestId?: string;
+  senderId?: string;
 }
 
 export interface SchoolMemoryAlbum {
