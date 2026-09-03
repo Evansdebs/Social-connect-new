@@ -24,6 +24,7 @@ import {
 } from 'firebase/auth';
 import { saveUserToFirebase, getUserFromFirebase, saveSchoolToFirebase } from '../../lib/firestoreService';
 import { User, UserRole, UserType, School } from '../../types';
+import { RequestSchoolModal } from './RequestSchoolModal';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -40,8 +41,9 @@ export const AuthModal: React.FC = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [userType, setUserType] = useState<UserType>('student');
-  const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || 'custom');
-  const [customSchoolName, setCustomSchoolName] = useState('');
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(schools[0]?.id || '');
+  const [showRequestSchoolModal, setShowRequestSchoolModal] = useState<boolean>(false);
+  const [requestedSchoolNotice, setRequestedSchoolNotice] = useState<string>('');
   const [classLevel, setClassLevel] = useState('Senior Secondary (Year 12)');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -104,37 +106,8 @@ export const AuthModal: React.FC = () => {
           return;
         }
 
-        let finalSchoolId = selectedSchool?.id;
-        let finalSchoolName = selectedSchool?.name;
-
-        if (!finalSchoolId || selectedSchoolId === 'custom') {
-          const sName = customSchoolName.trim() || 'My Campus';
-          finalSchoolId = `school-${Date.now()}`;
-          finalSchoolName = sName;
-
-          const newSchool: School = {
-            id: finalSchoolId,
-            name: sName,
-            username: sName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-            location: 'Main Campus',
-            region: 'Regional Campus',
-            website: 'https://campusconnect.edu',
-            established: new Date().getFullYear(),
-            studentCount: 1,
-            followersCount: 1,
-            logo: `https://api.dicebear.com/7.x/identicon/svg?seed=${finalSchoolId}`,
-            coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-            description: `Official Campus Connect community for ${sName}`,
-            motto: 'Knowledge, Integrity & Excellence',
-            isVerified: true,
-            rankings: {
-              activeRank: schools.length + 1,
-              challengeWins: 0,
-              popularityScore: 90
-            }
-          };
-          addSchool(newSchool);
-        }
+        let finalSchoolId = selectedSchool?.id || '';
+        let finalSchoolName = selectedSchool?.name || (requestedSchoolNotice ? `Pending Approval: ${requestedSchoolNotice}` : 'Independent Member');
 
         const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         const fbUser = userCred.user;
@@ -382,38 +355,45 @@ export const AuthModal: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="font-bold text-neutral-700 block mb-1">Campus School</label>
+                    <label className="font-bold text-neutral-700 block mb-1">Campus School (Optional)</label>
                     <select
                       value={selectedSchoolId}
                       onChange={(e) => setSelectedSchoolId(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500 truncate"
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500 truncate text-xs"
                     >
+                      <option value="">No School Selected (Optional / Skip for now)</option>
                       {schools.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name}
+                          {s.name} {s.location ? `(${s.location})` : ''}
                         </option>
                       ))}
-                      <option value="custom">+ Register School</option>
                     </select>
                   </div>
                 </div>
 
-                {(schools.length === 0 || selectedSchoolId === 'custom') && (
-                  <div>
-                    <label className="font-bold text-neutral-700 block mb-1">Campus / Institution Name</label>
-                    <div className="relative">
-                      <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                      <input
-                        type="text"
-                        required
-                        value={customSchoolName}
-                        onChange={(e) => setCustomSchoolName(e.target.value)}
-                        placeholder="e.g., University of Ghana or Achimota School"
-                        className="w-full pl-9 pr-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500"
-                      />
-                    </div>
+                {requestedSchoolNotice && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+                    <span>
+                      School addition request sent for <strong>{requestedSchoolNotice}</strong>. Admin will review and add it to the system.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setRequestedSchoolNotice('')}
+                      className="text-emerald-700 hover:text-emerald-900 font-bold ml-2"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowRequestSchoolModal(true)}
+                  className="w-full py-2 px-3 rounded-xl border border-dashed border-blue-300 bg-blue-50/60 hover:bg-blue-100/60 text-blue-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Can't find your school? Send a request to Admin</span>
+                </button>
 
                 <div>
                   <label className="font-bold text-neutral-700 block mb-1">Grade / Level</label>
@@ -478,6 +458,17 @@ export const AuthModal: React.FC = () => {
           </form>
         </div>
       </div>
+
+      <RequestSchoolModal
+        isOpen={showRequestSchoolModal}
+        onClose={() => setShowRequestSchoolModal(false)}
+        defaultName={name}
+        defaultEmail={email}
+        onSubmitted={(reqName) => {
+          setRequestedSchoolNotice(reqName);
+          setSelectedSchoolId('');
+        }}
+      />
     </div>
   );
 };

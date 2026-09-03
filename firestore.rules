@@ -93,5 +93,9 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true;
     }
+
+    match /schoolRequests/{reqId} {
+      allow read, write: if true;
+    }
   }
 }

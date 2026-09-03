@@ -16,7 +16,8 @@ import {
   ReportItem,
   SchoolStaffRecord,
   SchoolStaffPermissions,
-  ConnectionRequest
+  ConnectionRequest,
+  SchoolRequest
 } from '../types';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -62,7 +63,11 @@ import {
   subscribeToConnectionRequests,
   saveConnectionRequestToFirebase,
   updateConnectionRequestInFirebase,
-  deleteConnectionRequestFromFirebase
+  deleteConnectionRequestFromFirebase,
+  subscribeToSchoolRequests,
+  saveSchoolRequestToFirebase,
+  updateSchoolRequestInFirebase,
+  deleteSchoolRequestFromFirebase
 } from '../lib/firestoreService';
 import {
   DEFAULT_GUEST_USER,
@@ -97,6 +102,7 @@ export type ModalType =
 interface AppContextType {
   currentUser: User;
   users: User[];
+  allUsers: User[];
   isFirebaseAuthActive: boolean;
   firebaseUserEmail: string | null;
   isAuthenticated: boolean;
@@ -116,6 +122,17 @@ interface AppContextType {
   updateSchool: (schoolId: string, partial: Partial<School>) => void;
   deleteSchool: (schoolId: string) => void;
   activeSchool: School;
+  schoolRequests: SchoolRequest[];
+  createSchoolRequest: (data: {
+    schoolName: string;
+    location: string;
+    notes?: string;
+    requesterName?: string;
+    requesterEmail?: string;
+  }) => Promise<void>;
+  approveSchoolRequest: (requestId: string, schoolDetails?: Partial<School>) => Promise<void>;
+  rejectSchoolRequest: (requestId: string) => Promise<void>;
+  deleteSchoolRequest: (requestId: string) => Promise<void>;
   schoolStaff: SchoolStaffRecord[];
   isSchoolAuthorized: (schoolId?: string) => boolean;
   getSchoolPermissions: (schoolId?: string) => SchoolStaffPermissions | null;
@@ -216,6 +233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [schools, setSchools] = useState<School[]>([]);
+  const [schoolRequests, setSchoolRequests] = useState<SchoolRequest[]>([]);
 
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(() => {
     return localStorage.getItem('cc_selected_school_id') || null;
@@ -503,6 +521,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // Real-time school addition requests stream
+    const unsubSchoolReqs = subscribeToSchoolRequests((liveSchoolReqs) => {
+      setSchoolRequests(liveSchoolReqs);
+    });
+
     return () => {
       unsubAuth();
       unsubPosts();
@@ -517,6 +540,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubStaff();
       unsubNotifs();
       unsubReqs();
+      unsubSchoolReqs();
     };
   }, []);
 
@@ -588,7 +612,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Profile updated & synced to Cloud Firestore!', 'success');
   };
 
-  const isSuperAdmin = currentUser.role === 'super_admin';
+  const isSuperAdmin =
+    currentUser.role === 'super_admin' ||
+    currentUser.email === 'evansdebrah111@gmail.com' ||
+    firebaseUserEmail === 'evansdebrah111@gmail.com';
 
   const isSchoolAuthorized = (schoolId?: string): boolean => {
     if (!schoolId) return isSuperAdmin;
@@ -664,6 +691,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [school, ...prev];
     });
     saveSchoolToFirebase(school);
+    showToast(`School "${school.name}" added to the system.`, 'success');
+  };
+
+  const createSchoolRequest = async (data: {
+    schoolName: string;
+    location: string;
+    notes?: string;
+    requesterName?: string;
+    requesterEmail?: string;
+  }) => {
+    const newRequest: SchoolRequest = {
+      id: `req-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      schoolName: data.schoolName.trim(),
+      location: data.location.trim(),
+      notes: data.notes?.trim() || '',
+      requesterName: data.requesterName?.trim() || currentUser.name || 'Student Member',
+      requesterEmail: data.requesterEmail?.trim() || currentUser.email || '',
+      requesterUserId: currentUser.id || undefined,
+      createdAt: new Date().toISOString(),
+      status: 'pending'
+    };
+
+    setSchoolRequests((prev) => [newRequest, ...prev]);
+    await saveSchoolRequestToFirebase(newRequest);
+    showToast('School request submitted to Platform Admin! You can proceed with registration.', 'success');
+  };
+
+  const approveSchoolRequest = async (requestId: string, schoolDetails?: Partial<School>) => {
+    const req = schoolRequests.find((r) => r.id === requestId);
+    if (!req) return;
+
+    const sName = schoolDetails?.name || req.schoolName;
+    const sLocation = schoolDetails?.location || req.location;
+    const sUsername = (schoolDetails?.username || sName).toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const newSchoolId = `school-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+    const newSchool: School = {
+      id: newSchoolId,
+      name: sName,
+      username: sUsername,
+      location: sLocation,
+      region: schoolDetails?.region || 'National',
+      website: schoolDetails?.website || '',
+      motto: schoolDetails?.motto || 'Knowledge, Integrity & Excellence',
+      established: schoolDetails?.established || new Date().getFullYear(),
+      studentCount: schoolDetails?.studentCount || 50,
+      followersCount: 0,
+      logo: schoolDetails?.logo || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(sName)}`,
+      coverImage: schoolDetails?.coverImage || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+      description: schoolDetails?.description || `Official campus connect profile for ${sName}, ${sLocation}.`,
+      isVerified: true,
+      rankings: {
+        activeRank: schools.length + 1,
+        challengeWins: 0,
+        popularityScore: 100
+      }
+    };
+
+    addSchool(newSchool);
+    setSchoolRequests((prev) =>
+      prev.map((r) => (r.id === requestId ? { ...r, status: 'approved' } : r))
+    );
+    await updateSchoolRequestInFirebase(requestId, { status: 'approved' });
+    showToast(`Approved! "${sName}" has been added to official schools.`, 'success');
+  };
+
+  const rejectSchoolRequest = async (requestId: string) => {
+    setSchoolRequests((prev) =>
+      prev.map((r) => (r.id === requestId ? { ...r, status: 'rejected' } : r))
+    );
+    await updateSchoolRequestInFirebase(requestId, { status: 'rejected' });
+    showToast('School request declined.', 'info');
+  };
+
+  const deleteSchoolRequest = async (requestId: string) => {
+    setSchoolRequests((prev) => prev.filter((r) => r.id !== requestId));
+    await deleteSchoolRequestFromFirebase(requestId);
+    showToast('School request removed.', 'info');
   };
 
   const updateSchool = (schoolId: string, partial: Partial<School>) => {
@@ -709,7 +814,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Post published to Campus Connect!', 'success');
   };
 
-  // A user can like a post only once. If already liked, disallow unliking or re-liking.
+  // If user clicks like on an already liked post, unlike the user's initial like.
   const likePost = (postId: string, reaction: 'like' | 'love' | 'funny' | 'celebrate' | 'wow' = 'like') => {
     const targetPost = posts.find((p) => p.id === postId);
     const alreadyLiked =
@@ -718,7 +823,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       Boolean(currentUser.id && targetPost?.likedUserIds?.includes(currentUser.id));
 
     if (alreadyLiked) {
-      showToast('You have already liked this post. Each post can only be liked once.', 'info');
+      // If user selected a different emotion reaction from picker (e.g. switched from 'like' to 'love')
+      if (targetPost?.userReaction && targetPost.userReaction !== reaction && reaction !== 'like') {
+        setPosts((prev) =>
+          prev.map((p) => (p.id === postId ? { ...p, userReaction: reaction } : p))
+        );
+        showToast(`Reaction updated to ${reaction}!`, 'info');
+        return;
+      }
+
+      // Otherwise, unlike the user's initial like
+      setLikedPostIds((prev) => prev.filter((id) => id !== postId));
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const newCount = Math.max(0, p.likesCount - 1);
+          const newLikedUserIds = (p.likedUserIds || []).filter((uid) => uid !== currentUser.id);
+          updatePostInFirebase(postId, {
+            likesCount: newCount,
+            likedUserIds: newLikedUserIds
+          });
+          return {
+            ...p,
+            likedByUser: false,
+            likesCount: newCount,
+            likedUserIds: newLikedUserIds,
+            userReaction: undefined
+          };
+        })
+      );
+      showToast('Post unliked', 'info');
       return;
     }
 
@@ -1383,6 +1517,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         users,
+        allUsers: users,
         isFirebaseAuthActive,
         firebaseUserEmail,
         isAuthenticated,
@@ -1402,6 +1537,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSchool,
         deleteSchool,
         activeSchool,
+        schoolRequests,
+        createSchoolRequest,
+        approveSchoolRequest,
+        rejectSchoolRequest,
+        deleteSchoolRequest,
         schoolStaff,
         isSchoolAuthorized,
         getSchoolPermissions,

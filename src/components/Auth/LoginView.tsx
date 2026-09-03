@@ -28,6 +28,7 @@ import {
 } from 'firebase/auth';
 import { saveUserToFirebase, getUserFromFirebase, saveSchoolToFirebase } from '../../lib/firestoreService';
 import { User, UserRole, UserType, School } from '../../types';
+import { RequestSchoolModal } from '../Modals/RequestSchoolModal';
 
 export const LoginView: React.FC = () => {
   const { schools, addSchool, setAuthUser, showToast } = useApp();
@@ -39,8 +40,9 @@ export const LoginView: React.FC = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [userType, setUserType] = useState<UserType>('student');
-  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(schools[0]?.id || 'custom');
-  const [customSchoolName, setCustomSchoolName] = useState('');
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(schools[0]?.id || '');
+  const [showRequestSchoolModal, setShowRequestSchoolModal] = useState<boolean>(false);
+  const [requestedSchoolNotice, setRequestedSchoolNotice] = useState<string>('');
   const [classLevel, setClassLevel] = useState('Senior Secondary (Year 12)');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -100,37 +102,8 @@ export const LoginView: React.FC = () => {
           return;
         }
 
-        let finalSchoolId = selectedSchool?.id;
-        let finalSchoolName = selectedSchool?.name;
-
-        if (!finalSchoolId || selectedSchoolId === 'custom') {
-          const sName = customSchoolName.trim() || 'My Campus';
-          finalSchoolId = `school-${Date.now()}`;
-          finalSchoolName = sName;
-
-          const newSchool: School = {
-            id: finalSchoolId,
-            name: sName,
-            username: sName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-            location: 'Main Campus',
-            region: 'Regional Campus',
-            website: 'https://campusconnect.edu',
-            established: new Date().getFullYear(),
-            studentCount: 1,
-            followersCount: 1,
-            logo: `https://api.dicebear.com/7.x/identicon/svg?seed=${finalSchoolId}`,
-            coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-            description: `Official Campus Connect community for ${sName}`,
-            motto: 'Knowledge, Integrity & Excellence',
-            isVerified: true,
-            rankings: {
-              activeRank: schools.length + 1,
-              challengeWins: 0,
-              popularityScore: 90
-            }
-          };
-          addSchool(newSchool);
-        }
+        let finalSchoolId = selectedSchool?.id || '';
+        let finalSchoolName = selectedSchool?.name || (requestedSchoolNotice ? `Pending Approval: ${requestedSchoolNotice}` : 'Independent Member');
 
         const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         const fbUser = userCred.user;
@@ -200,33 +173,10 @@ export const LoginView: React.FC = () => {
 
       let userProfile = await getUserFromFirebase(fbUser.uid);
       if (!userProfile) {
-        const defaultSchoolName = selectedSchool?.name || 'General Campus';
-        const defaultSchoolId = selectedSchool?.id || 'school-general';
+        const assignedSchool = selectedSchool || schools[0];
+        const defaultSchoolName = assignedSchool?.name || 'Independent Member';
+        const defaultSchoolId = assignedSchool?.id || '';
 
-        if (!schools.some((s) => s.id === defaultSchoolId)) {
-          const defaultSchool: School = {
-            id: defaultSchoolId,
-            name: defaultSchoolName,
-            username: defaultSchoolName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-            location: 'Main Campus',
-            region: 'National',
-            website: 'https://campusconnect.edu',
-            established: new Date().getFullYear(),
-            studentCount: 1,
-            followersCount: 1,
-            logo: `https://api.dicebear.com/7.x/identicon/svg?seed=${defaultSchoolId}`,
-            coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-            description: `Official Campus Connect community for ${defaultSchoolName}`,
-            motto: 'Knowledge, Integrity & Excellence',
-            isVerified: true,
-            rankings: {
-              activeRank: 1,
-              challengeWins: 0,
-              popularityScore: 90
-            }
-          };
-          addSchool(defaultSchool);
-        }
         userProfile = {
           id: fbUser.uid,
           name: fbUser.displayName || 'Campus Member',
@@ -505,42 +455,47 @@ export const LoginView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="font-bold text-neutral-700 block mb-1">Select School / Campus *</label>
+                    <label className="font-bold text-neutral-700 block mb-1">Select School / Campus (Optional)</label>
                     <div className="relative">
-                      <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+                      <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
                       <select
                         value={selectedSchoolId}
                         onChange={(e) => setSelectedSchoolId(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500 transition-colors appearance-none"
+                        className="w-full pl-9 pr-8 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500 transition-colors text-xs"
                       >
+                        <option value="">No School Selected (Optional / Skip for now)</option>
                         {schools.map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.name}
+                            {s.name} {s.location ? `(${s.location})` : ''}
                           </option>
                         ))}
-                        <option value="custom">+ Register New Campus / School</option>
                       </select>
                     </div>
                   </div>
 
-                  {(schools.length === 0 || selectedSchoolId === 'custom') && (
-                    <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-1">
-                      <label className="font-bold text-blue-900 block text-[11px]">
-                        Campus / School Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={customSchoolName}
-                        onChange={(e) => setCustomSchoolName(e.target.value)}
-                        placeholder="e.g. University of Ghana or Achimota School"
-                        className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-xl outline-none focus:border-blue-500 text-xs"
-                      />
-                      <p className="text-[10px] text-blue-700">
-                        This campus will be registered on Campus Connect for your peers to join.
-                      </p>
+                  {requestedSchoolNotice && (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+                      <span>
+                        School addition request sent for <strong>{requestedSchoolNotice}</strong>. Admin will review and add it!
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setRequestedSchoolNotice('')}
+                        className="text-emerald-700 hover:text-emerald-900 font-bold ml-2 cursor-pointer"
+                      >
+                        ✕
+                      </button>
                     </div>
                   )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowRequestSchoolModal(true)}
+                    className="w-full py-2 px-3 rounded-xl border border-dashed border-blue-300 bg-blue-50/60 hover:bg-blue-100/60 text-blue-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Can't find your school? Send a request to Admin</span>
+                  </button>
 
                   <div>
                     <label className="font-bold text-neutral-700 block mb-1">Academic Grade / Level</label>
@@ -651,6 +606,17 @@ export const LoginView: React.FC = () => {
       <footer className="w-full max-w-7xl mx-auto px-6 py-6 text-center text-xs text-slate-500 relative z-10 border-t border-slate-900">
         <p>© {new Date().getFullYear()} Campus Connect. All rights reserved. Built for verified campus communities.</p>
       </footer>
+
+      <RequestSchoolModal
+        isOpen={showRequestSchoolModal}
+        onClose={() => setShowRequestSchoolModal(false)}
+        defaultName={name}
+        defaultEmail={email}
+        onSubmitted={(reqName) => {
+          setRequestedSchoolNotice(reqName);
+          setSelectedSchoolId('');
+        }}
+      />
     </div>
   );
 };

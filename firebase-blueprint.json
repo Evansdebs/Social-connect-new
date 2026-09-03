@@ -224,6 +224,19 @@
         "assignedAt": { "type": "string" },
         "assignedBy": { "type": "string", "optional": true }
       }
+    },
+    "schoolRequests": {
+      "fields": {
+        "id": { "type": "string" },
+        "schoolName": { "type": "string" },
+        "location": { "type": "string" },
+        "notes": { "type": "string", "optional": true },
+        "requesterName": { "type": "string", "optional": true },
+        "requesterEmail": { "type": "string", "optional": true },
+        "requesterUserId": { "type": "string", "optional": true },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string" }
+      }
     }
   }
 }

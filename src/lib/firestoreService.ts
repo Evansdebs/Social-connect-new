@@ -26,7 +26,8 @@ import {
   School,
   ReportItem,
   SchoolStaffRecord,
-  ConnectionRequest
+  ConnectionRequest,
+  SchoolRequest
 } from '../types';
 
 // No seeded dummy data - production relies solely on real user accounts and creations
@@ -562,4 +563,53 @@ export async function deleteConnectionRequestFromFirebase(reqId: string) {
     console.warn('deleteConnectionRequestFromFirebase fallback:', err);
   }
 }
+
+// -------------------------------------------------------------
+// School Addition Requests from Students / Users
+// -------------------------------------------------------------
+
+export function subscribeToSchoolRequests(onUpdate: (requests: SchoolRequest[]) => void) {
+  try {
+    const q = query(collection(db, 'schoolRequests'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: SchoolRequest[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as SchoolRequest);
+        });
+        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore schoolRequests snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export async function saveSchoolRequestToFirebase(req: SchoolRequest) {
+  try {
+    await setDoc(doc(db, 'schoolRequests', req.id), req);
+  } catch (err) {
+    console.warn('saveSchoolRequestToFirebase fallback:', err);
+  }
+}
+
+export async function updateSchoolRequestInFirebase(reqId: string, partial: Partial<SchoolRequest>) {
+  try {
+    await updateDoc(doc(db, 'schoolRequests', reqId), partial);
+  } catch (err) {
+    console.warn('updateSchoolRequestInFirebase fallback:', err);
+  }
+}
+
+export async function deleteSchoolRequestFromFirebase(reqId: string) {
+  try {
+    await deleteDoc(doc(db, 'schoolRequests', reqId));
+  } catch (err) {
+    console.warn('deleteSchoolRequestFromFirebase fallback:', err);
+  }
+}
+
 

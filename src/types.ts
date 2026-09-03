@@ -327,3 +327,16 @@ export interface ReportItem {
   timestamp: string;
   status: 'pending' | 'investigating' | 'resolved' | 'dismissed';
 }
+
+export interface SchoolRequest {
+  id: string;
+  schoolName: string;
+  location: string;
+  notes?: string;
+  requesterName?: string;
+  requesterEmail?: string;
+  requesterUserId?: string;
+  createdAt: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
