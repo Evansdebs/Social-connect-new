@@ -9,7 +9,7 @@ interface PostCommentsProps {
 }
 
 export const PostComments: React.FC<PostCommentsProps> = ({ post, postComments }) => {
-  const { currentUser, addComment, deleteComment } = useApp();
+  const { currentUser, addComment, deleteComment, viewProfile, openAvatarPreview, users } = useApp();
   const [commentInput, setCommentInput] = useState('');
 
   const handleAddCommentSubmit = (e: React.FormEvent) => {
@@ -26,7 +26,17 @@ export const PostComments: React.FC<PostCommentsProps> = ({ post, postComments }
         <img
           src={currentUser.avatar}
           alt={currentUser.name}
-          className="w-7 h-7 rounded-full object-cover shrink-0"
+          onClick={() =>
+            openAvatarPreview({
+              name: currentUser.name,
+              username: currentUser.username,
+              avatar: currentUser.avatar,
+              school: currentUser.schoolName,
+              userId: currentUser.id
+            })
+          }
+          title="Tap to open profile picture"
+          className="w-7 h-7 rounded-full object-cover shrink-0 cursor-pointer hover:ring-1 hover:ring-blue-500"
         />
         <input
           type="text"
@@ -51,12 +61,26 @@ export const PostComments: React.FC<PostCommentsProps> = ({ post, postComments }
             <img
               src={comm.authorAvatar}
               alt={comm.authorName}
-              className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5"
+              onClick={() =>
+                openAvatarPreview({
+                  name: comm.authorName,
+                  avatar: comm.authorAvatar,
+                  userId: comm.authorId
+                })
+              }
+              title="Tap to open profile picture"
+              className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 cursor-pointer hover:ring-1 hover:ring-blue-500"
             />
             <div className="flex-1 min-w-0">
               <div className="bg-neutral-100 rounded-2xl px-3 py-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-neutral-900">{comm.authorName}</span>
+                  <span
+                    onClick={() => viewProfile(comm.authorId)}
+                    title="View user profile"
+                    className="font-bold text-neutral-900 cursor-pointer hover:text-blue-600 hover:underline"
+                  >
+                    {comm.authorName}
+                  </span>
                   <span className="text-[10px] text-neutral-400">{comm.createdAt}</span>
                 </div>
                 <p className="text-neutral-800 mt-0.5">{comm.text}</p>
@@ -80,19 +104,38 @@ export const PostComments: React.FC<PostCommentsProps> = ({ post, postComments }
               {/* Threaded replies */}
               {comm.replies && comm.replies.length > 0 && (
                 <div className="mt-2 pl-4 border-l-2 border-neutral-200 space-y-2">
-                  {comm.replies.map((reply) => (
-                    <div key={reply.id} className="flex items-start gap-2">
-                      <img
-                        src={reply.authorAvatar}
-                        alt={reply.authorName}
-                        className="w-5 h-5 rounded-full object-cover shrink-0"
-                      />
-                      <div className="bg-neutral-100 rounded-xl px-2.5 py-1.5 text-xs">
-                        <span className="font-bold text-neutral-900 block">{reply.authorName}</span>
-                        <span className="text-neutral-800">{reply.text}</span>
+                  {comm.replies.map((reply) => {
+                    const matchedReplyUser = users.find((u) => u.name === reply.authorName);
+                    return (
+                      <div key={reply.id} className="flex items-start gap-2">
+                        <img
+                          src={reply.authorAvatar}
+                          alt={reply.authorName}
+                          onClick={() =>
+                            openAvatarPreview({
+                              name: reply.authorName,
+                              avatar: reply.authorAvatar,
+                              userId: matchedReplyUser?.id
+                            })
+                          }
+                          title="Tap to open profile picture"
+                          className="w-5 h-5 rounded-full object-cover shrink-0 cursor-pointer hover:ring-1 hover:ring-blue-500"
+                        />
+                        <div className="bg-neutral-100 rounded-xl px-2.5 py-1.5 text-xs">
+                          <span
+                            onClick={() => {
+                              if (matchedReplyUser) viewProfile(matchedReplyUser.id);
+                            }}
+                            title="View profile"
+                            className="font-bold text-neutral-900 block cursor-pointer hover:underline hover:text-blue-600"
+                          >
+                            {reply.authorName}
+                          </span>
+                          <span className="text-neutral-800">{reply.text}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

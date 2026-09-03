@@ -16,7 +16,7 @@ import {
 import { processImageFile, CURATED_CAMPUS_MEDIA } from '../../lib/uploadHelper';
 
 export const CreatePostCard: React.FC = () => {
-  const { currentUser, createPost, openModal, showToast } = useApp();
+  const { currentUser, createPost, openModal, showToast, openAvatarPreview } = useApp();
   const [text, setText] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [allowDownloads, setAllowDownloads] = useState(true);
@@ -108,7 +108,17 @@ export const CreatePostCard: React.FC = () => {
         <img
           src={currentUser.avatar}
           alt={currentUser.name}
-          className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
+          onClick={() =>
+            openAvatarPreview({
+              name: currentUser.name,
+              username: currentUser.username,
+              avatar: currentUser.avatar,
+              school: currentUser.schoolName,
+              userId: currentUser.id
+            })
+          }
+          title="Tap to open profile picture"
+          className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500"
         />
         <div className="flex-1 min-w-0">
           <textarea

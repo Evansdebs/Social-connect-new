@@ -15,14 +15,19 @@ import {
   Megaphone,
   Sparkles,
   Smile,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const {
     currentUser,
+    users,
     likePost,
     repostPost,
+    deletePost,
+    viewProfile,
+    openAvatarPreview,
     comments,
     votePoll,
     savedPostIds,
@@ -104,14 +109,34 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           <img
             src={post.authorAvatar}
             alt={post.authorName}
-            className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
+            onClick={() =>
+              openAvatarPreview({
+                name: post.authorName,
+                username: post.authorUsername,
+                avatar: post.authorAvatar,
+                school: post.authorSchool,
+                userId: post.authorId
+              })
+            }
+            title="Tap to open profile picture"
+            className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500 hover:scale-105 transition-all"
           />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-bold text-sm text-neutral-900 truncate">
+              <span
+                onClick={() => viewProfile(post.authorId)}
+                title="View user profile"
+                className="font-bold text-sm text-neutral-900 truncate cursor-pointer hover:text-blue-600 hover:underline"
+              >
                 {post.authorName}
               </span>
-              <span className="text-xs text-neutral-400">@{post.authorUsername}</span>
+              <span
+                onClick={() => viewProfile(post.authorId)}
+                title="View user profile"
+                className="text-xs text-neutral-400 cursor-pointer hover:text-blue-600 hover:underline"
+              >
+                @{post.authorUsername}
+              </span>
               {(post.isOfficialAnnouncement || post.authorRole === 'super_admin') && (
                 <span className="text-blue-600 text-xs font-bold" title="Verified Campus Page">✓</span>
               )}
@@ -169,12 +194,41 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 </button>
               )}
 
+              {/* View Author Profile Option */}
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                  viewProfile(post.authorId);
+                }}
+                className="w-full text-left px-3 py-2 hover:bg-neutral-50 flex items-center gap-2 text-neutral-700"
+              >
+                <Share2 className="w-3.5 h-3.5 opacity-0" />
+                <span>View Author Profile</span>
+              </button>
+
+              {/* Delete Post if Author or Super Admin */}
+              {currentUser && (currentUser.id === post.authorId || currentUser.role === 'super_admin') && (
+                <button
+                  id={`delete-post-${post.id}-btn`}
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    if (window.confirm('Delete this post? Once deleted, it leaves the system and no one will see it.')) {
+                      deletePost(post.id);
+                    }
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 font-semibold border-t border-neutral-100"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Delete Post</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   openModal('report', { targetType: 'post', targetId: post.id });
                   setShowMoreMenu(false);
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600"
+                className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 border-t border-neutral-100"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>Report Content</span>
@@ -208,9 +262,29 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
             <img
               src={post.repostOf.originalAuthorAvatar}
               alt={post.repostOf.originalAuthorName}
-              className="w-6 h-6 rounded-full object-cover"
+              onClick={() =>
+                openAvatarPreview({
+                  name: post.repostOf?.originalAuthorName || '',
+                  username: post.repostOf?.originalAuthorUsername,
+                  avatar: post.repostOf?.originalAuthorAvatar || '',
+                  school: post.repostOf?.originalAuthorSchool
+                })
+              }
+              title="Tap to open profile picture"
+              className="w-6 h-6 rounded-full object-cover cursor-pointer hover:ring-1 hover:ring-blue-500"
             />
-            <span className="font-bold text-xs text-neutral-900">
+            <span
+              onClick={() => {
+                const target = users.find(
+                  (u) =>
+                    u.username === post.repostOf?.originalAuthorUsername ||
+                    u.name === post.repostOf?.originalAuthorName
+                );
+                if (target) viewProfile(target.id);
+              }}
+              title="View author profile"
+              className="font-bold text-xs text-neutral-900 cursor-pointer hover:underline hover:text-blue-600"
+            >
               {post.repostOf.originalAuthorName}
             </span>
             <span className="text-[11px] text-neutral-500">

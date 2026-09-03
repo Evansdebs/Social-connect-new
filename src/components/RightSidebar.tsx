@@ -17,6 +17,8 @@ export const RightSidebar: React.FC = () => {
     cancelConnectionRequest,
     setActiveTab,
     setSearchQuery,
+    viewProfile,
+    openAvatarPreview,
     posts
   } = useApp();
 
@@ -208,10 +210,26 @@ export const RightSidebar: React.FC = () => {
                     <img
                       src={user.avatar}
                       alt={user.name}
-                      className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
+                      onClick={() =>
+                        openAvatarPreview({
+                          name: user.name,
+                          username: user.username,
+                          avatar: user.avatar,
+                          school: user.schoolName,
+                          userId: user.id
+                        })
+                      }
+                      title="Tap to open profile picture"
+                      className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500"
                     />
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
+                      <p
+                        onClick={() => viewProfile(user.id)}
+                        title="View profile"
+                        className="text-xs font-bold text-neutral-900 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                      >
+                        {user.name}
+                      </p>
                       <p className="text-[10px] text-blue-600 truncate">{user.schoolName}</p>
                       <p className="text-[10px] text-neutral-400 truncate">
                         {(user.creatorTalents || []).slice(0, 2).join(' • ')}

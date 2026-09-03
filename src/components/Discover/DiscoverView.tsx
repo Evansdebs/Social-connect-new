@@ -34,6 +34,8 @@ export const DiscoverView: React.FC = () => {
     voteChallenge,
     setSelectedSchoolId,
     setActiveTab,
+    viewProfile,
+    openAvatarPreview,
     requestConnection,
     connectedUserIds,
     sentConnectionRequestUserIds,
@@ -364,11 +366,33 @@ export const DiscoverView: React.FC = () => {
                     <img
                       src={u.avatar}
                       alt={u.name}
-                      className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
+                      onClick={() =>
+                        openAvatarPreview({
+                          name: u.name,
+                          username: u.username,
+                          avatar: u.avatar,
+                          school: u.schoolName,
+                          userId: u.id
+                        })
+                      }
+                      title="Tap to open profile picture"
+                      className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500"
                     />
                     <div className="min-w-0">
-                      <p className="font-bold text-xs text-neutral-900 truncate">{u.name}</p>
-                      <p className="text-[10px] text-neutral-500 truncate">@{u.username}</p>
+                      <p
+                        onClick={() => viewProfile(u.id)}
+                        title="View profile"
+                        className="font-bold text-xs text-neutral-900 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                      >
+                        {u.name}
+                      </p>
+                      <p
+                        onClick={() => viewProfile(u.id)}
+                        title="View profile"
+                        className="text-[10px] text-neutral-500 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                      >
+                        @{u.username}
+                      </p>
                       <p className="text-[10px] text-blue-600 font-semibold truncate">
                         🏫 {u.schoolName}
                       </p>

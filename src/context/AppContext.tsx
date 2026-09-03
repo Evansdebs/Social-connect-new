@@ -97,12 +97,17 @@ export type ModalType =
   | 'school_admin'
   | 'platform_admin'
   | 'edit_profile'
-  | 'auth';
+  | 'auth'
+  | 'view_avatar';
 
 interface AppContextType {
   currentUser: User;
   users: User[];
   allUsers: User[];
+  viewingUserId: string | null;
+  viewProfile: (userId: string) => void;
+  clearViewingUser: () => void;
+  openAvatarPreview: (data: { name: string; username?: string; avatar: string; school?: string; userId?: string }) => void;
   isFirebaseAuthActive: boolean;
   firebaseUserEmail: string | null;
   isAuthenticated: boolean;
@@ -295,10 +300,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
   const [modalTargetData, setModalTargetData] = useState<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  const viewProfile = (userId: string) => {
+    setViewingUserId(userId);
+    setActiveTab('profile');
+    setActiveModal(null);
+    setModalTargetData(null);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const clearViewingUser = () => {
+    setViewingUserId(null);
+  };
+
+  const openAvatarPreview = (data: {
+    name: string;
+    username?: string;
+    avatar: string;
+    school?: string;
+    userId?: string;
+  }) => {
+    setActiveModal('view_avatar');
+    setModalTargetData(data);
+  };
 
   // Real Firebase Authentication status
   const [isFirebaseAuthActive, setIsFirebaseAuthActive] = useState<boolean>(false);
@@ -791,10 +822,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('School removed.', 'info');
   };
 
-  const deletePost = (postId: string) => {
+  const deletePost = async (postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-    deletePostFromFirebase(postId);
-    showToast('Post removed successfully.', 'info');
+    setSavedPostIds((prev) => prev.filter((id) => id !== postId));
+    setLikedPostIds((prev) => prev.filter((id) => id !== postId));
+    setComments((prev) => {
+      const copy = { ...prev };
+      delete copy[postId];
+      return copy;
+    });
+    await deletePostFromFirebase(postId);
+    showToast('Post deleted permanently from Campus Connect.', 'info');
   };
 
   const createPost = (newPostData: Omit<Post, 'id' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'repostsCount' | 'createdAt'>) => {
@@ -1590,6 +1628,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resolveReport,
         activeTab,
         setActiveTab,
+        viewingUserId,
+        viewProfile,
+        clearViewingUser,
+        openAvatarPreview,
         searchQuery,
         setSearchQuery,
         activeModal,

@@ -41,7 +41,10 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
     connectedUserIds,
     incomingConnectionRequests,
     acceptConnectionRequest,
-    declineConnectionRequest
+    declineConnectionRequest,
+    viewProfile,
+    clearViewingUser,
+    openAvatarPreview
   } = useApp();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -252,11 +255,31 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                           <img
                             src={n.senderAvatar}
                             alt={n.senderName}
-                            className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0 mt-0.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openAvatarPreview({
+                                name: n.senderName,
+                                avatar: n.senderAvatar,
+                                userId: n.senderId
+                              });
+                            }}
+                            title="Tap to open profile picture"
+                            className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0 mt-0.5 cursor-pointer hover:ring-2 hover:ring-blue-500"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-neutral-800 leading-snug">
-                              <span className="font-semibold text-neutral-900">{n.senderName}</span>{' '}
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markNotificationRead(n.id);
+                                  setShowNotifMenu(false);
+                                  viewProfile(n.senderId);
+                                }}
+                                title="View profile"
+                                className="font-semibold text-neutral-900 cursor-pointer hover:text-blue-600 hover:underline"
+                              >
+                                {n.senderName}
+                              </span>{' '}
                               {n.content}
                             </p>
                             <span className="text-[10px] text-neutral-400 mt-1 block">
@@ -405,13 +428,29 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                 <div className="p-1 border-b border-neutral-100">
                   <button
                     onClick={() => {
-                      setActiveTab('profile');
+                      clearViewingUser();
                       setShowUserMenu(false);
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg flex items-center justify-between"
                   >
                     <span>View My Profile</span>
                     <span className="text-neutral-400 text-[10px]">@{currentUser.username}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      openAvatarPreview({
+                        name: currentUser.name,
+                        username: currentUser.username,
+                        avatar: currentUser.avatar,
+                        school: currentUser.schoolName,
+                        userId: currentUser.id
+                      });
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg flex items-center justify-between"
+                  >
+                    <span>View Profile Picture</span>
+                    <span className="text-blue-500 text-[10px]">Photo</span>
                   </button>
                   {isSchoolAuthorized(currentUser.schoolId) && (
                     <button

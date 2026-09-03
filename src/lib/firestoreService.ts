@@ -8,6 +8,7 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  where,
   limit
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -251,6 +252,16 @@ export async function updatePostInFirebase(postId: string, partial: Partial<Post
 export async function deletePostFromFirebase(postId: string) {
   try {
     await deleteDoc(doc(db, 'posts', postId));
+    // Also clean up any post comments in Firestore
+    try {
+      const q = query(collection(db, 'comments'), where('postId', '==', postId));
+      const snapshot = await getDocs(q);
+      snapshot.forEach(async (d) => {
+        await deleteDoc(doc(db, 'comments', d.id));
+      });
+    } catch {
+      // Ignored if comments cleanup encounters offline mode
+    }
   } catch (err) {
     console.warn('deletePostFromFirebase offline fallback:', err);
   }
