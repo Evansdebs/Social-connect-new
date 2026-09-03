@@ -196,6 +196,8 @@ interface AppContextType {
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   followedUserIds: string[];
   toggleFollowUser: (userId: string) => void;
+  followedSchoolIds: string[];
+  toggleFollowSchool: (schoolId: string) => void;
   connectedUserIds: string[];
   connectionRequests: ConnectionRequest[];
   sentConnectionRequestUserIds: string[];
@@ -265,6 +267,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [followedUserIds, setFollowedUserIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('cc_followed_users');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [followedSchoolIds, setFollowedSchoolIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('cc_followed_schools');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -1303,11 +1310,87 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const toggleFollowUser = (userId: string) => {
-    setFollowedUserIds((prev) => {
-      const isFollowing = prev.includes(userId);
-      showToast(isFollowing ? 'Unfollowed user' : 'Following user updates!', 'info');
-      return isFollowing ? prev.filter((id) => id !== userId) : [...prev, userId];
-    });
+    if (!currentUser.id || currentUser.id === 'guest') {
+      openModal('auth');
+      return;
+    }
+    if (userId === currentUser.id) {
+      showToast('You cannot follow yourself.', 'info');
+      return;
+    }
+    const isCurrentlyFollowing = followedUserIds.includes(userId);
+    const updatedFollowed = isCurrentlyFollowing
+      ? followedUserIds.filter((id) => id !== userId)
+      : [...followedUserIds, userId];
+
+    setFollowedUserIds(updatedFollowed);
+    localStorage.setItem('cc_followed_users', JSON.stringify(updatedFollowed));
+
+    // Update target user's followersCount in local state & Firestore
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id !== userId) return u;
+        const newCount = Math.max(0, (u.followersCount || 0) + (isCurrentlyFollowing ? -1 : 1));
+        return { ...u, followersCount: newCount };
+      })
+    );
+    const targetUser = users.find((u) => u.id === userId);
+    if (targetUser) {
+      const newFollowers = Math.max(0, (targetUser.followersCount || 0) + (isCurrentlyFollowing ? -1 : 1));
+      updateUserInFirebase(userId, { followersCount: newFollowers });
+    }
+
+    // Update currentUser's followingCount in local state & Firestore
+    const newFollowingCount = Math.max(
+      0,
+      (currentUser.followingCount || 0) + (isCurrentlyFollowing ? -1 : 1)
+    );
+    updateCurrentUserProfile({ followingCount: newFollowingCount });
+
+    showToast(isCurrentlyFollowing ? 'Unfollowed user' : 'Following user updates!', 'info');
+  };
+
+  const toggleFollowSchool = (schoolId: string) => {
+    if (!currentUser.id || currentUser.id === 'guest') {
+      openModal('auth');
+      return;
+    }
+    const isCurrentlyFollowing = followedSchoolIds.includes(schoolId);
+    const updatedFollowed = isCurrentlyFollowing
+      ? followedSchoolIds.filter((id) => id !== schoolId)
+      : [...followedSchoolIds, schoolId];
+
+    setFollowedSchoolIds(updatedFollowed);
+    localStorage.setItem('cc_followed_schools', JSON.stringify(updatedFollowed));
+
+    // Update school followersCount in local state & Firestore
+    setSchools((prev) =>
+      prev.map((s) => {
+        if (s.id !== schoolId) return s;
+        const newCount = Math.max(0, (s.followersCount || 0) + (isCurrentlyFollowing ? -1 : 1));
+        return { ...s, followersCount: newCount };
+      })
+    );
+    const targetSchool = schools.find((s) => s.id === schoolId);
+    if (targetSchool) {
+      const newFollowers = Math.max(0, (targetSchool.followersCount || 0) + (isCurrentlyFollowing ? -1 : 1));
+      updateSchool(schoolId, { followersCount: newFollowers });
+    }
+
+    // Following a school also counts toward currentUser's following count
+    const newFollowingCount = Math.max(
+      0,
+      (currentUser.followingCount || 0) + (isCurrentlyFollowing ? -1 : 1)
+    );
+    updateCurrentUserProfile({ followingCount: newFollowingCount });
+
+    const sName = targetSchool?.name || 'campus';
+    showToast(
+      isCurrentlyFollowing
+        ? `Unfollowed ${sName}`
+        : `Now following official updates from ${sName}!`,
+      'info'
+    );
   };
 
   const sentConnectionRequestUserIds = connectionRequests
@@ -1422,14 +1505,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       updateConnectionRequestInFirebase(targetReq.id, { status: 'accepted' });
 
-      setConnectedUserIds((prev) => Array.from(new Set([...prev, partnerId])));
+      const newConnectedList = Array.from(new Set([...connectedUserIds, partnerId]));
+      setConnectedUserIds(newConnectedList);
+      localStorage.setItem('cc_connected_users', JSON.stringify(newConnectedList));
 
       const newConnectionsCount = (currentUser.connectionsCount || 0) + 1;
       updateCurrentUserProfile({ connectionsCount: newConnectionsCount });
 
       if (partnerUser) {
+        const partnerCount = (partnerUser.connectionsCount || 0) + 1;
+        setUsers((prev) =>
+          prev.map((u) => (u.id === partnerId ? { ...u, connectionsCount: partnerCount } : u))
+        );
         updateUserInFirebase(partnerUser.id, {
-          connectionsCount: (partnerUser.connectionsCount || 0) + 1
+          connectionsCount: partnerCount
         });
       }
 
@@ -1497,9 +1586,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const removeConnection = (targetUserId: string) => {
-    setConnectedUserIds((prev) => prev.filter((id) => id !== targetUserId));
+    const newConnectedList = connectedUserIds.filter((id) => id !== targetUserId);
+    setConnectedUserIds(newConnectedList);
+    localStorage.setItem('cc_connected_users', JSON.stringify(newConnectedList));
     const newCount = Math.max(0, (currentUser.connectionsCount || 1) - 1);
     updateCurrentUserProfile({ connectionsCount: newCount });
+
+    const partnerUser = users.find((u) => u.id === targetUserId);
+    if (partnerUser) {
+      const partnerCount = Math.max(0, (partnerUser.connectionsCount || 1) - 1);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === targetUserId ? { ...u, connectionsCount: partnerCount } : u))
+      );
+      updateUserInFirebase(targetUserId, { connectionsCount: partnerCount });
+    }
 
     const existing = connectionRequests.find(
       (r) =>
@@ -1642,6 +1742,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast,
         followedUserIds,
         toggleFollowUser,
+        followedSchoolIds,
+        toggleFollowSchool,
         connectedUserIds,
         connectionRequests,
         sentConnectionRequestUserIds,

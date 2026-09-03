@@ -30,14 +30,15 @@ export const SchoolProfileView: React.FC = () => {
     currentUser,
     openModal,
     showToast,
-    isSchoolAuthorized
+    isSchoolAuthorized,
+    followedSchoolIds,
+    toggleFollowSchool
   } = useApp();
 
   const [activeSchoolTab, setActiveSchoolTab] = useState<
     'feed' | 'clubs' | 'events' | 'memories' | 'challenges'
   >('feed');
 
-  const [isFollowingSchool, setIsFollowingSchool] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [newSchoolName, setNewSchoolName] = useState('');
   const [newSchoolMotto, setNewSchoolMotto] = useState('');
@@ -288,24 +289,22 @@ export const SchoolProfileView: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setIsFollowingSchool(!isFollowingSchool);
-                  showToast(
-                    isFollowingSchool
-                      ? `Unfollowed ${activeSchool.name}`
-                      : `Now following official updates from ${activeSchool.name}!`,
-                    'success'
-                  );
-                }}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all shadow-xs ${
-                  isFollowingSchool
-                    ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {isFollowingSchool ? 'Following School' : '+ Follow School'}
-              </button>
+              {(() => {
+                const isFollowingSchool = followedSchoolIds.includes(activeSchool.id);
+                return (
+                  <button
+                    id={`follow-school-${activeSchool.id}-btn`}
+                    onClick={() => toggleFollowSchool(activeSchool.id)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                      isFollowingSchool
+                        ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border border-neutral-200'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {isFollowingSchool ? '✓ Following School' : '+ Follow School'}
+                  </button>
+                );
+              })()}
 
               <button
                 onClick={() => {

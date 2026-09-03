@@ -22,6 +22,7 @@ import { PostCard } from '../Feed/PostCard';
 
 export const DiscoverView: React.FC = () => {
   const {
+    currentUser,
     searchQuery,
     setSearchQuery,
     users,
@@ -51,13 +52,14 @@ export const DiscoverView: React.FC = () => {
 
   const query = searchQuery.toLowerCase().trim();
 
-  // Search filter logic
+  // Search filter logic - Exclude current user from discover/explore user list
   const filteredUsers = users.filter(
     (u) =>
-      u.name.toLowerCase().includes(query) ||
-      u.username.toLowerCase().includes(query) ||
-      u.schoolName.toLowerCase().includes(query) ||
-      u.creatorTalents.some((t) => t.toLowerCase().includes(query))
+      u.id !== currentUser.id &&
+      (u.name.toLowerCase().includes(query) ||
+        u.username.toLowerCase().includes(query) ||
+        u.schoolName.toLowerCase().includes(query) ||
+        u.creatorTalents.some((t) => t.toLowerCase().includes(query)))
   );
 
   const filteredSchools = schools.filter(
@@ -351,6 +353,7 @@ export const DiscoverView: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredUsers.map((u) => {
+              if (u.id === currentUser.id) return null;
               const isConnected = connectedUserIds.includes(u.id);
               const isPendingSent = sentConnectionRequestUserIds.includes(u.id);
               const incomingReq = incomingConnectionRequests.find(

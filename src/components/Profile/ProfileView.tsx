@@ -52,11 +52,13 @@ export const ProfileView: React.FC = () => {
     requestConnection,
     followedUserIds,
     toggleFollowUser,
+    followedSchoolIds,
+    toggleFollowSchool,
     startDirectMessage
   } = useApp();
 
-  const isOwnProfile = !viewingUserId || viewingUserId === currentUser.id;
   const targetUser = (viewingUserId && users.find((u) => u.id === viewingUserId)) || currentUser;
+  const isOwnProfile = !viewingUserId || viewingUserId === currentUser.id || targetUser.id === currentUser.id;
 
   const [activeProfileTab, setActiveProfileTab] = useState<
     'posts' | 'media' | 'reels' | 'reposts' | 'saved' | 'badges' | 'connections' | 'about'
@@ -308,19 +310,25 @@ export const ProfileView: React.FC = () => {
           <div className="flex items-center gap-6 text-xs text-neutral-600 py-3 border-t border-neutral-100">
             <div>
               <strong className="font-extrabold text-neutral-900 text-sm">
-                {targetUser.followersCount}
+                {isOwnProfile
+                  ? (currentUser.followersCount ?? 0)
+                  : (targetUser.followersCount ?? 0)}
               </strong>{' '}
               followers
             </div>
             <div>
               <strong className="font-extrabold text-neutral-900 text-sm">
-                {targetUser.followingCount}
+                {isOwnProfile
+                  ? Math.max(currentUser.followingCount || 0, followedUserIds.length + (followedSchoolIds?.length || 0))
+                  : (targetUser.followingCount ?? 0)}
               </strong>{' '}
               following
             </div>
             <div>
               <strong className="font-extrabold text-neutral-900 text-sm">
-                {targetUser.connectionsCount}
+                {isOwnProfile
+                  ? connectedUserIds.length
+                  : (targetUser.connectionsCount ?? (isConnected ? 1 : 0))}
               </strong>{' '}
               connections
             </div>

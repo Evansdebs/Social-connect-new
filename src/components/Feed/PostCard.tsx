@@ -41,6 +41,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const postComments: Comment[] = comments[post.id] || [];
   const isSaved = savedPostIds.includes(post.id);
@@ -100,6 +102,48 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           <span>
             Reposted by <strong className="text-neutral-800">{post.authorName}</strong>
           </span>
+        </div>
+      )}
+
+      {/* In-Card Delete Confirmation Banner */}
+      {showDeleteConfirm && (
+        <div className="mb-3.5 p-3.5 bg-rose-50 rounded-xl border border-rose-200 animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+              <Trash2 className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-rose-950">Delete this post permanently?</p>
+              <p className="text-[11px] text-rose-700 mt-0.5">
+                Once deleted, this post leaves the system completely and no one will see it.
+              </p>
+              <div className="flex items-center gap-2 mt-2.5">
+                <button
+                  id={`confirm-delete-post-${post.id}-btn`}
+                  disabled={isDeleting}
+                  onClick={async () => {
+                    setIsDeleting(true);
+                    try {
+                      await deletePost(post.id);
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Post'}</span>
+                </button>
+                <button
+                  disabled={isDeleting}
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-3 py-1.5 bg-white hover:bg-neutral-100 text-neutral-700 text-xs font-semibold rounded-lg border border-neutral-200 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -212,9 +256,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                   id={`delete-post-${post.id}-btn`}
                   onClick={() => {
                     setShowMoreMenu(false);
-                    if (window.confirm('Delete this post? Once deleted, it leaves the system and no one will see it.')) {
-                      deletePost(post.id);
-                    }
+                    setShowDeleteConfirm(true);
                   }}
                   className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 font-semibold border-t border-neutral-100"
                 >

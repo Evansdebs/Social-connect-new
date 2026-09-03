@@ -198,6 +198,7 @@ export const RightSidebar: React.FC = () => {
         {candidateUsers.length > 0 ? (
           <div className="space-y-3">
             {candidateUsers.slice(0, 3).map((user) => {
+              if (user.id === currentUser.id) return null;
               const isConnected = connectedUserIds.includes(user.id);
               const isPendingSent = sentConnectionRequestUserIds.includes(user.id);
               const incomingReq = incomingConnectionRequests.find(
