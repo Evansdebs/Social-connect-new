@@ -409,3 +409,21 @@ export interface SchoolRequest {
   status: 'pending' | 'approved' | 'rejected';
 }
 
+export interface MarketItem {
+  id: string;
+  sellerId: string;
+  sellerName: string;
+  sellerAvatar: string;
+  sellerSchool: string;
+  title: string;
+  description: string;
+  price: number;
+  category: 'Textbooks' | 'Notes' | 'Electronics' | 'Uniforms' | 'Dorm' | 'Other';
+  condition: 'New' | 'Like New' | 'Good' | 'Fair';
+  images: string[];
+  isWishlisted?: boolean;
+  createdAt: string;
+  location: string;
+  status?: 'available' | 'sold';
+}
+

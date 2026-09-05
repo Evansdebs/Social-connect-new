@@ -21,7 +21,8 @@ import {
   ClubChannel,
   GroupMessage,
   ConnectionRequest,
-  SchoolRequest
+  SchoolRequest,
+  MarketItem
 } from '../types';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -71,14 +72,16 @@ import {
   subscribeToSchoolRequests,
   saveSchoolRequestToFirebase,
   updateSchoolRequestInFirebase,
-  deleteSchoolRequestFromFirebase
+  deleteSchoolRequestFromFirebase,
+  subscribeToChallenges,
+  subscribeToMarketplace,
+  saveMarketItemToFirebase,
+  updateMarketItemInFirebase,
+  deleteMarketItemFromFirebase
 } from '../lib/firestoreService';
 import {
   DEFAULT_GUEST_USER,
   DEFAULT_BLANK_SCHOOL,
-  DEMO_ADMIN_USER,
-  DEMO_STUDENT_USER,
-  DEMO_TEACHER_USER,
   INITIAL_DEMO_SCHOOLS,
   INITIAL_DEMO_CHALLENGES,
   INITIAL_DEMO_EVENTS,
@@ -235,6 +238,10 @@ interface AppContextType {
   cancelConnectionRequest: (userId: string) => void;
   removeConnection: (userId: string) => void;
   resetDemoData: () => void;
+  marketplaceItems: MarketItem[];
+  addMarketItem: (item: Omit<MarketItem, 'id' | 'createdAt' | 'sellerId' | 'sellerName' | 'sellerAvatar' | 'sellerSchool'>) => Promise<void>;
+  deleteMarketItem: (itemId: string) => Promise<void>;
+  toggleWishlistMarketItem: (itemId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -260,12 +267,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Firestore-backed collections (posts, stories, etc.) start empty and are
   // populated exclusively by real-time Firestore listeners — preventing the
   // stale-localStorage-overrides-fresh-Firestore conflict.
-  // Base users: Start with curated demo users so initial browse works immediately
-  const [users, setUsers] = useState<User[]>([
-    DEMO_ADMIN_USER,
-    DEMO_STUDENT_USER,
-    DEMO_TEACHER_USER
-  ]);
+  // Real-time Firestore users collection is the authoritative source
+  const [users, setUsers] = useState<User[]>([]);
 
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
     return localStorage.getItem('cc_current_user_id') || '';
@@ -286,7 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       : [
           {
             id: 'init-audit-1',
-            adminId: 'super-admin-1',
+            adminId: 'system-admin',
             adminName: 'Platform Administrator',
             action: 'System Security Console Initialized',
             target: 'Platform Governance Hub',
@@ -308,6 +311,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [reports, setReports] = useState<ReportItem[]>([]);
+  const [marketplaceItems, setMarketplaceItems] = useState<MarketItem[]>(() => {
+    const saved = localStorage.getItem('cc_marketplace_items');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Fix #5: Only persisted user-preference state stays in localStorage
   const [savedPostIds, setSavedPostIds] = useState<string[]>(() => {
@@ -364,13 +371,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: 'Official channel for the Inter-School Robotics League. Share builds, ideas & competition updates!',
       membersCount: 284,
       isJoined: false,
-      messages: [
-        { id: 'gm-1', channelId: 'channel-robotics', senderId: 'demo-student-1', senderName: 'Kwame Mensah', senderAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80', senderSchool: 'Achimota Senior High', text: 'Just finished the chassis for our bot! 🤖 Competition is in 2 weeks.', timestamp: '10:24 AM' },
-        { id: 'gm-2', channelId: 'channel-robotics', senderId: 'demo-teacher-1', senderName: 'Dr. Evelyn Addo', senderAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80', senderSchool: 'PRESEC', text: 'Excellent work Kwame! Has everyone submitted their technical spec sheets?', timestamp: '10:31 AM' },
-      ],
-      lastMessage: 'Has everyone submitted their technical spec sheets?',
-      lastMessageTime: '10:31 AM',
-      unreadCount: 2
+      messages: [],
+      lastMessage: 'Welcome to the Robotics League channel!',
+      lastMessageTime: 'Active',
+      unreadCount: 0
     },
     {
       id: 'channel-debate',
@@ -381,12 +385,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: 'Official channel for the National Debate Society. Motions, practice sessions & tournament news!',
       membersCount: 156,
       isJoined: false,
-      messages: [
-        { id: 'gm-3', channelId: 'channel-debate', senderId: 'super-admin-1', senderName: 'Platform Administrator', senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', senderSchool: 'Campus Connect', text: '📢 New debate motion released: "AI should replace teachers in secondary schools." Prep your cases!', timestamp: '9:00 AM' },
-      ],
-      lastMessage: 'New debate motion released',
-      lastMessageTime: '9:00 AM',
-      unreadCount: 1
+      messages: [],
+      lastMessage: 'Welcome to the National Debate Society channel!',
+      lastMessageTime: 'Active',
+      unreadCount: 0
     },
     {
       id: 'channel-arts',
@@ -397,11 +399,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       description: 'Share your art, music, photography, poetry, and creative projects with fellow campus creators.',
       membersCount: 412,
       isJoined: false,
-      messages: [
-        { id: 'gm-4', channelId: 'channel-arts', senderId: 'demo-student-1', senderName: 'Kwame Mensah', senderAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80', senderSchool: 'Achimota Senior High', text: 'Just dropped my new digital artwork for the campus art show! 🎨', timestamp: '8:45 AM' },
-      ],
-      lastMessage: 'Just dropped my new digital artwork!',
-      lastMessageTime: '8:45 AM',
+      messages: [],
+      lastMessage: 'Welcome to the Campus Arts channel!',
+      lastMessageTime: 'Active',
       unreadCount: 0
     }
   ]);
@@ -484,6 +484,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('cc_selected_school_id', selectedSchoolId || '');
   }, [selectedSchoolId]);
+
+  useEffect(() => {
+    localStorage.setItem('cc_marketplace_items', JSON.stringify(marketplaceItems));
+  }, [marketplaceItems]);
 
 
   // Firestore & Firebase Auth real-time sync
@@ -666,6 +670,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSchoolRequests(liveSchoolReqs);
     });
 
+    // Real-time challenges stream
+    const unsubChallenges = subscribeToChallenges((liveChallenges) => {
+      if (liveChallenges.length > 0) {
+        setChallenges(liveChallenges);
+      }
+    });
+
+    // Real-time marketplace stream
+    const unsubMarketplace = subscribeToMarketplace((liveItems) => {
+      if (liveItems.length > 0) {
+        setMarketplaceItems(liveItems);
+      }
+    });
+
     return () => {
       unsubAuth();
       unsubPosts();
@@ -681,6 +699,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubNotifs();
       unsubReqs();
       unsubSchoolReqs();
+      unsubChallenges();
+      unsubMarketplace();
     };
   }, []);
 
@@ -695,7 +715,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     users.find((u) => u.id === currentUserId) || DEFAULT_GUEST_USER;
 
   const isAuthenticated: boolean = Boolean(
-    (isFirebaseAuthActive || currentUserId.startsWith('demo-') || currentUserId.startsWith('super-admin')) &&
+    isFirebaseAuthActive &&
     currentUserId &&
     currentUserId !== 'guest' &&
     currentUser &&
@@ -1947,6 +1967,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Connection removed.', 'info');
   };
 
+  const addMarketItem = async (itemData: Omit<MarketItem, 'id' | 'createdAt' | 'sellerId' | 'sellerName' | 'sellerAvatar' | 'sellerSchool'>) => {
+    const newItem: MarketItem = {
+      ...itemData,
+      id: `item-${Date.now()}`,
+      sellerId: currentUser.id,
+      sellerName: currentUser.name,
+      sellerAvatar: currentUser.avatar,
+      sellerSchool: currentUser.schoolName || 'Campus Member',
+      createdAt: new Date().toISOString(),
+      isWishlisted: false,
+      status: 'available'
+    };
+    setMarketplaceItems((prev) => [newItem, ...prev]);
+    await saveMarketItemToFirebase(newItem);
+    showToast('Item listed on Campus Marketplace!', 'success');
+  };
+
+  const deleteMarketItem = async (itemId: string) => {
+    setMarketplaceItems((prev) => prev.filter((i) => i.id !== itemId));
+    await deleteMarketItemFromFirebase(itemId);
+    showToast('Marketplace listing removed.', 'info');
+  };
+
+  const toggleWishlistMarketItem = (itemId: string) => {
+    setMarketplaceItems((prev) =>
+      prev.map((it) => (it.id === itemId ? { ...it, isWishlisted: !it.isWishlisted } : it))
+    );
+  };
+
   const resetDemoData = () => {
     localStorage.clear();
     setUsers([]);
@@ -2100,7 +2149,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         declineConnectionRequest,
         cancelConnectionRequest,
         removeConnection,
-        resetDemoData
+        resetDemoData,
+        marketplaceItems,
+        addMarketItem,
+        deleteMarketItem,
+        toggleWishlistMarketItem
       }}
     >
       {children}

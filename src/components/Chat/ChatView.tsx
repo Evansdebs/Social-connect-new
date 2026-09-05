@@ -19,7 +19,8 @@ export const ChatView: React.FC = () => {
     activeChannelId,
     setActiveChannelId,
     sendGroupMessage,
-    toggleJoinChannel
+    toggleJoinChannel,
+    setActiveTab: setMainActiveTab
   } = useApp();
 
   const [messageInput, setMessageInput] = useState('');
@@ -155,7 +156,7 @@ export const ChatView: React.FC = () => {
                     <p className="font-bold text-xs text-neutral-900 truncate">{conv.participant.name}</p>
                     <span className="text-[10px] text-neutral-400 shrink-0">{conv.lastMessageTime}</span>
                   </div>
-                  <p className="text-[11px] text-blue-600 font-medium truncate mb-0.5">?? {conv.participant.school}</p>
+                  <p className="text-[11px] text-blue-600 font-medium truncate mb-0.5">🏫 {conv.participant.school}</p>
                   <p className="text-xs text-neutral-500 truncate">{conv.lastMessage}</p>
                 </div>
                 {conv.unreadCount > 0 && (
@@ -195,9 +196,20 @@ export const ChatView: React.FC = () => {
           })}
 
           {activeTab === 'direct' && filteredConversations.length === 0 && (
-            <div className="p-6 text-center text-neutral-400 text-xs">
-              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-neutral-300" />
-              <p>No conversations yet. Connect with students to start chatting!</p>
+            <div className="p-8 text-center text-neutral-400 text-xs flex flex-col items-center">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center mb-3">
+                <MessageSquare className="w-6 h-6" />
+              </div>
+              <p className="font-bold text-neutral-800 text-sm mb-1">No conversations yet</p>
+              <p className="text-xs text-neutral-500 max-w-xs mb-4">
+                Connect with campus peers or contact sellers on the marketplace to start chatting!
+              </p>
+              <button
+                onClick={() => setMainActiveTab('discover')}
+                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                Discover Classmates
+              </button>
             </div>
           )}
         </div>

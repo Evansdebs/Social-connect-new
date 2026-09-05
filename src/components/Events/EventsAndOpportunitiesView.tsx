@@ -184,8 +184,9 @@ export const EventsAndOpportunitiesView: React.FC = () => {
 
       {/* Events View */}
       {activeSection === 'events' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredEvents.map((ev) => {
+        filteredEvents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {filteredEvents.map((ev) => {
             const isUserGoing = ev.userStatus === 'going';
             const isUserCheckedIn = ev.checkedInUserIds?.includes(currentUser.id);
             const attendeesList = ev.attendees || [];
@@ -346,13 +347,31 @@ export const EventsAndOpportunitiesView: React.FC = () => {
               </div>
             );
           })}
-        </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border border-neutral-200/80 p-12 text-center shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3">
+              <Calendar className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-sm text-neutral-800 mb-1">No campus events found</h3>
+            <p className="text-xs text-neutral-500 max-w-sm mx-auto mb-4">
+              No events match the selected category. Check back soon or switch categories to explore other activities.
+            </p>
+            <button
+              onClick={() => setEventCategoryFilter('All')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              View All Campus Events
+            </button>
+          </div>
+        )
       )}
 
       {/* Opportunities Board */}
       {activeSection === 'opportunities' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredOpportunities.map((opp) => (
+        filteredOpportunities.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredOpportunities.map((opp) => (
             <div
               key={opp.id}
               className="bg-white rounded-3xl border border-neutral-200/80 p-5 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between"
@@ -398,7 +417,24 @@ export const EventsAndOpportunitiesView: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border border-neutral-200/80 p-12 text-center shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-sm text-neutral-800 mb-1">No opportunities found</h3>
+            <p className="text-xs text-neutral-500 max-w-sm mx-auto mb-4">
+              Explore scholarships, grants, and internships across all categories.
+            </p>
+            <button
+              onClick={() => setOppTypeFilter('All')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              View All Opportunities
+            </button>
+          </div>
+        )
       )}
 
       {/* ================= MODAL 1: DIGITAL EVENT PASS & CHECK-IN TICKET ================= */}

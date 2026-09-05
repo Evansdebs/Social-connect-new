@@ -80,88 +80,109 @@ export const CommunitiesView: React.FC = () => {
       </div>
 
       {/* Clubs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredClubs.map((club) => (
-          <div
-            key={club.id}
-            className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col justify-between"
-          >
-            {/* Cover image header */}
-            <div className="h-32 w-full relative bg-neutral-900">
-              <img src={club.coverImage} alt={club.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-              <div className="absolute top-3 right-3">
-                {club.isOfficialClub ? (
-                  <span className="text-[10px] bg-blue-600/90 backdrop-blur text-white font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                    <ShieldCheck className="w-3 h-3 text-sky-200" />
-                    <span>Official School Club</span>
-                  </span>
-                ) : (
-                  <span className="text-[10px] bg-neutral-900/80 backdrop-blur text-white font-bold px-2 py-0.5 rounded-full shadow-sm">
-                    Cross-Campus Community
-                  </span>
-                )}
-              </div>
-              <div className="absolute bottom-3 left-3 text-white">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-300">
-                  {club.category}
-                </span>
-                <h3 className="font-extrabold text-sm sm:text-base leading-tight drop-shadow">
-                  {club.name}
-                </h3>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="p-4 flex-1 flex flex-col justify-between">
-              <div>
-                <p className="text-xs text-neutral-600 leading-relaxed mb-3">
-                  {club.description}
-                </p>
-
-                {club.rules && club.rules.length > 0 && (
-                  <div className="bg-neutral-50 rounded-xl p-2.5 border border-neutral-100 mb-3 space-y-1">
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-700">
-                      <BookOpen className="w-3 h-3 text-neutral-500" />
-                      <span>Community Guidelines</span>
-                    </div>
-                    {club.rules.slice(0, 2).map((rule, idx) => (
-                      <p key={idx} className="text-[10px] text-neutral-500">
-                        • {rule}
-                      </p>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Join Action */}
-              <div className="pt-3 border-t border-neutral-100 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-bold text-neutral-900">{club.membersCount}</span>
-                  <span className="text-neutral-500 ml-1">students</span>
-                  {club.schoolName && (
-                    <span className="text-[11px] text-blue-600 block font-medium">
-                      🏫 {club.schoolName}
+      {filteredClubs.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredClubs.map((club) => (
+            <div
+              key={club.id}
+              className="bg-white rounded-2xl border border-neutral-200/80 overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col justify-between"
+            >
+              {/* Cover image header */}
+              <div className="h-32 w-full relative bg-neutral-900">
+                <img src={club.coverImage} alt={club.name} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                <div className="absolute top-3 right-3">
+                  {club.isOfficialClub ? (
+                    <span className="text-[10px] bg-blue-600/90 backdrop-blur text-white font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                      <ShieldCheck className="w-3 h-3 text-sky-200" />
+                      <span>Official School Club</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-neutral-900/80 backdrop-blur text-white font-bold px-2 py-0.5 rounded-full shadow-sm">
+                      Cross-Campus Community
                     </span>
                   )}
                 </div>
+                <div className="absolute bottom-3 left-3 text-white">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-300">
+                    {club.category}
+                  </span>
+                  <h3 className="font-extrabold text-sm sm:text-base leading-tight drop-shadow">
+                    {club.name}
+                  </h3>
+                </div>
+              </div>
 
-                <button
-                  id={`join-club-${club.id}`}
-                  onClick={() => toggleJoinClub(club.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                    club.isJoined
-                      ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                  }`}
-                >
-                  {club.isJoined ? 'Joined ✓' : 'Join Club'}
-                </button>
+              {/* Body */}
+              <div className="p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <p className="text-xs text-neutral-600 leading-relaxed mb-3">
+                    {club.description}
+                  </p>
+
+                  {club.rules && club.rules.length > 0 && (
+                    <div className="bg-neutral-50 rounded-xl p-2.5 border border-neutral-100 mb-3 space-y-1">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-neutral-700">
+                        <BookOpen className="w-3 h-3 text-neutral-500" />
+                        <span>Community Guidelines</span>
+                      </div>
+                      {club.rules.slice(0, 2).map((rule, idx) => (
+                        <p key={idx} className="text-[10px] text-neutral-500">
+                          • {rule}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom Join Action */}
+                <div className="pt-3 border-t border-neutral-100 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-neutral-900">{club.membersCount}</span>
+                    <span className="text-neutral-500 ml-1">students</span>
+                    {club.schoolName && (
+                      <span className="text-[11px] text-blue-600 block font-medium">
+                        🏫 {club.schoolName}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    id={`join-club-${club.id}`}
+                    onClick={() => toggleJoinClub(club.id)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                      club.isJoined
+                        ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                    }`}
+                  >
+                    {club.isJoined ? 'Joined ✓' : 'Join Club'}
+                  </button>
+                </div>
               </div>
             </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-neutral-200/80 p-12 text-center shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+            <Users className="w-6 h-6" />
           </div>
-        ))}
-      </div>
+          <h3 className="font-extrabold text-sm text-neutral-800 mb-1">No campus clubs found</h3>
+          <p className="text-xs text-neutral-500 max-w-sm mx-auto mb-4">
+            No clubs match your current search or filter. Start your own club to bring students together!
+          </p>
+          <button
+            onClick={() => {
+              setFilter('all');
+              setSearch('');
+            }}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            Reset Filters
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -29,7 +29,6 @@ import {
 } from 'firebase/auth';
 import { saveUserToFirebase, getUserFromFirebase, saveSchoolToFirebase } from '../../lib/firestoreService';
 import { User, UserRole, UserType, School } from '../../types';
-import { DEMO_ADMIN_USER, DEMO_STUDENT_USER, DEMO_TEACHER_USER } from '../../data/initialData';
 import { RequestSchoolModal } from '../Modals/RequestSchoolModal';
 
 export const LoginView: React.FC = () => {
@@ -498,48 +497,6 @@ export const LoginView: React.FC = () => {
               </div>
             )}
 
-            {/* Quick Demo Credentials */}
-            <div className="mb-4 p-3 bg-neutral-50 border border-neutral-200 rounded-2xl">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] uppercase font-black text-neutral-500 tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-500" />
-                  Instant Demo Access
-                </span>
-                <span className="text-[10px] text-neutral-400">1-Click</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthUser(DEMO_STUDENT_USER);
-                    showToast(`Signed in as Student: ${DEMO_STUDENT_USER.name}!`, 'success');
-                  }}
-                  className="py-1.5 px-2 bg-white hover:bg-blue-50 hover:border-blue-300 border border-neutral-200 rounded-xl text-[11px] font-bold text-neutral-700 hover:text-blue-700 transition-colors text-center cursor-pointer shadow-2xs"
-                >
-                  🎓 Student
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthUser(DEMO_TEACHER_USER);
-                    showToast(`Signed in as Faculty: ${DEMO_TEACHER_USER.name}!`, 'success');
-                  }}
-                  className="py-1.5 px-2 bg-white hover:bg-emerald-50 hover:border-emerald-300 border border-neutral-200 rounded-xl text-[11px] font-bold text-neutral-700 hover:text-emerald-700 transition-colors text-center cursor-pointer shadow-2xs"
-                >
-                  👨‍🏫 Teacher
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthUser(DEMO_ADMIN_USER);
-                    showToast('Signed in as Super Administrator!', 'success');
-                  }}
-                  className="py-1.5 px-2 bg-white hover:bg-purple-50 hover:border-purple-300 border border-neutral-200 rounded-xl text-[11px] font-bold text-neutral-700 hover:text-purple-700 transition-colors text-center cursor-pointer shadow-2xs"
-                >
-                  🛡️ Admin
-                </button>
-              </div>
-            </div>
 
             {/* One-Click Google Authentication */}
             <button

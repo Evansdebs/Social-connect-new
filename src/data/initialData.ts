@@ -48,86 +48,6 @@ export const DEFAULT_BLANK_SCHOOL: School = {
   }
 };
 
-export const DEMO_ADMIN_USER: User = {
-  id: 'super-admin-1',
-  name: 'Platform Administrator',
-  username: 'campus_admin',
-  email: 'admin@campusconnect.edu',
-  role: 'super_admin',
-  userType: 'staff',
-  accountStatus: 'active',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-  coverImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&auto=format&fit=crop&q=80',
-  bio: 'Super Administrator overseeing safety, campus governance, and inter-school community features.',
-  schoolId: 'school-achimota',
-  schoolName: 'Central Campus Governance',
-  classLevel: 'Super Administrator',
-  interests: ['Campus Safety', 'Education Technology', 'Inter-School Leagues'],
-  creatorTalents: ['Platform Governance'],
-  badges: ['Super Admin', 'Staff Verified', 'Shield'],
-  followersCount: 1840,
-  followingCount: 120,
-  connectionsCount: 450,
-  isVerified: true,
-  isPrivate: false,
-  allowDownloads: true,
-  whoCanMessage: 'everyone',
-  whoCanConnect: 'everyone'
-};
-
-export const DEMO_STUDENT_USER: User = {
-  id: 'demo-student-1',
-  name: 'Kwame Mensah',
-  username: 'kwame_mensah',
-  email: 'kwame@achimota.edu',
-  role: 'user',
-  userType: 'student',
-  accountStatus: 'active',
-  avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-  coverImage: 'https://images.unsplash.com/photo-1562774053-701939374585?w=1200&auto=format&fit=crop&q=80',
-  bio: 'Senior Secondary student, Robotics Club lead & Debate finalist. Building future tech!',
-  schoolId: 'school-achimota',
-  schoolName: 'Achimota Senior High',
-  classLevel: 'Senior Secondary (Year 12)',
-  interests: ['Robotics', 'Debate', 'Soccer', 'Coding'],
-  creatorTalents: ['Science & Tech', 'Public Speaking'],
-  badges: ['Student Council', 'Debate Finalist', 'Verified Student'],
-  followersCount: 342,
-  followingCount: 180,
-  connectionsCount: 120,
-  isVerified: true,
-  isPrivate: false,
-  allowDownloads: true,
-  whoCanMessage: 'everyone',
-  whoCanConnect: 'everyone'
-};
-
-export const DEMO_TEACHER_USER: User = {
-  id: 'demo-teacher-1',
-  name: 'Dr. Evelyn Addo',
-  username: 'dr_evelyn_addo',
-  email: 'evelyn.addo@presec.edu',
-  role: 'user',
-  userType: 'teacher',
-  accountStatus: 'active',
-  avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
-  coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-  bio: 'Faculty Coordinator for Science & Mathematics. Mentor for National Science & Maths Quiz team.',
-  schoolId: 'school-presec',
-  schoolName: 'Presbyterian Boys Secondary (PRESEC)',
-  classLevel: 'Faculty Coordinator',
-  interests: ['Mathematics', 'Physics', 'STEM Education'],
-  creatorTalents: ['Faculty Mentorship'],
-  badges: ['Faculty Patron', 'NSMQ Coach', 'Verified Faculty'],
-  followersCount: 890,
-  followingCount: 45,
-  connectionsCount: 230,
-  isVerified: true,
-  isPrivate: false,
-  allowDownloads: true,
-  whoCanMessage: 'everyone',
-  whoCanConnect: 'everyone'
-};
 
 export const INITIAL_DEMO_SCHOOLS: School[] = [
   {
@@ -220,38 +140,7 @@ export const INITIAL_DEMO_CHALLENGES: Challenge[] = [
       votes: 1480,
       cheers: 1620
     },
-    hypeMessages: [
-      {
-        id: 'hype-1',
-        authorId: 'demo-student-1',
-        authorName: 'Kwame Mensah',
-        authorAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-        authorSchool: 'Achimota Senior High',
-        schoolCheered: 'Achimota Senior High',
-        text: 'Motown boys and girls are ready! Our physics and calculus speed is unmatched this year! 🔥⚡',
-        timestamp: '10 mins ago'
-      },
-      {
-        id: 'hype-2',
-        authorId: 'demo-teacher-1',
-        authorName: 'Dr. Evelyn Addo',
-        authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
-        authorSchool: 'Presbyterian Boys Secondary (PRESEC)',
-        schoolCheered: 'Presbyterian Boys Secondary (PRESEC)',
-        text: 'The 7-time champions are coming for Trophy #8. Blue Magic all the way! 💙🏆',
-        timestamp: '5 mins ago'
-      },
-      {
-        id: 'hype-3',
-        authorId: 'super-admin-1',
-        authorName: 'Platform Administrator',
-        authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        authorSchool: 'Central Governance',
-        schoolCheered: 'Both Teams',
-        text: 'May the sharpest minds win! Remember fair play and high campus spirit! 🤝🎓',
-        timestamp: 'Just now'
-      }
-    ]
+    hypeMessages: []
   },
   {
     id: 'challenge-hackathon-2026',
@@ -277,18 +166,7 @@ export const INITIAL_DEMO_CHALLENGES: Challenge[] = [
       votes: 920,
       cheers: 980
     },
-    hypeMessages: [
-      {
-        id: 'hype-4',
-        authorId: 'demo-student-1',
-        authorName: 'Kwame Mensah',
-        authorAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-        authorSchool: 'Achimota Senior High',
-        schoolCheered: 'Achimota Senior High Tech Team',
-        text: 'High school engineers taking on the university seniors! Let’s code! 💻🚀',
-        timestamp: '25 mins ago'
-      }
-    ]
+    hypeMessages: []
   },
   {
     id: 'challenge-debate-2026',
@@ -333,47 +211,10 @@ export const INITIAL_DEMO_EVENTS: CampusEvent[] = [
     category: 'Academics',
     interestedCount: 342,
     goingCount: 188,
-    userStatus: 'going',
+    userStatus: null,
     eventCode: 'NSMQ-2026-GH',
-    checkedInUserIds: ['demo-student-1'],
-    attendees: [
-      {
-        id: 'demo-student-1',
-        name: 'Kwame Mensah',
-        username: 'kwamemensah',
-        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Achimota Senior High',
-        checkedIn: true,
-        ticketCode: 'NSMQ-KW9281'
-      },
-      {
-        id: 'user-ama',
-        name: 'Ama Serwaa',
-        username: 'amaserwaa',
-        avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Wesley Girls High School',
-        checkedIn: false,
-        ticketCode: 'NSMQ-AM4810'
-      },
-      {
-        id: 'user-kofi',
-        name: 'Kofi Boateng',
-        username: 'kofiboateng',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Presbyterian Boys Secondary (PRESEC)',
-        checkedIn: true,
-        ticketCode: 'NSMQ-KF6619'
-      },
-      {
-        id: 'demo-teacher-1',
-        name: 'Dr. Evelyn Addo',
-        username: 'dr_addo',
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Presbyterian Boys Secondary (PRESEC)',
-        checkedIn: true,
-        ticketCode: 'NSMQ-VIP-01'
-      }
-    ]
+    checkedInUserIds: [],
+    attendees: []
   },
   {
     id: 'event-sports-derby-2026',
@@ -389,29 +230,10 @@ export const INITIAL_DEMO_EVENTS: CampusEvent[] = [
     category: 'Sports',
     interestedCount: 512,
     goingCount: 290,
-    userStatus: 'interested',
+    userStatus: null,
     eventCode: 'ATHL-2026-UG',
     checkedInUserIds: [],
-    attendees: [
-      {
-        id: 'user-kofi',
-        name: 'Kofi Boateng',
-        username: 'kofiboateng',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Presbyterian Boys Secondary (PRESEC)',
-        checkedIn: false,
-        ticketCode: 'ATHL-KB102'
-      },
-      {
-        id: 'demo-student-1',
-        name: 'Kwame Mensah',
-        username: 'kwamemensah',
-        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Achimota Senior High',
-        checkedIn: false,
-        ticketCode: 'ATHL-KM882'
-      }
-    ]
+    attendees: []
   },
   {
     id: 'event-hackathon-2026',
@@ -430,17 +252,7 @@ export const INITIAL_DEMO_EVENTS: CampusEvent[] = [
     userStatus: null,
     eventCode: 'HACK-2026-UG',
     checkedInUserIds: [],
-    attendees: [
-      {
-        id: 'demo-student-1',
-        name: 'Kwame Mensah',
-        username: 'kwamemensah',
-        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Achimota Senior High',
-        checkedIn: false,
-        ticketCode: 'HACK-KM311'
-      }
-    ]
+    attendees: []
   },
   {
     id: 'event-arts-festival-2026',
@@ -456,20 +268,10 @@ export const INITIAL_DEMO_EVENTS: CampusEvent[] = [
     category: 'Arts',
     interestedCount: 680,
     goingCount: 395,
-    userStatus: 'going',
+    userStatus: null,
     eventCode: 'ARTS-2026-ACH',
     checkedInUserIds: [],
-    attendees: [
-      {
-        id: 'user-ama',
-        name: 'Ama Serwaa',
-        username: 'amaserwaa',
-        avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
-        schoolName: 'Wesley Girls High School',
-        checkedIn: false,
-        ticketCode: 'ARTS-AM902'
-      }
-    ]
+    attendees: []
   }
 ];
 

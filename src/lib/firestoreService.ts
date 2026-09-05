@@ -28,7 +28,8 @@ import {
   ReportItem,
   SchoolStaffRecord,
   ConnectionRequest,
-  SchoolRequest
+  SchoolRequest,
+  MarketItem
 } from '../types';
 
 // No seeded dummy data - production relies solely on real user accounts and creations
@@ -220,6 +221,45 @@ export function subscribeToUsers(onUpdate: (users: User[]) => void) {
         onUpdate(list);
       },
       (error) => console.warn('Firestore users snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToChallenges(onUpdate: (challenges: Challenge[]) => void) {
+  try {
+    const q = query(collection(db, 'challenges'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: Challenge[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Challenge);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore challenges snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export function subscribeToMarketplace(onUpdate: (items: MarketItem[]) => void) {
+  try {
+    const q = query(collection(db, 'marketplace'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: MarketItem[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as MarketItem);
+        });
+        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore marketplace snapshot warning:', error)
     );
   } catch (e) {
     return () => {};
@@ -620,6 +660,30 @@ export async function deleteSchoolRequestFromFirebase(reqId: string) {
     await deleteDoc(doc(db, 'schoolRequests', reqId));
   } catch (err) {
     console.warn('deleteSchoolRequestFromFirebase fallback:', err);
+  }
+}
+
+export async function saveMarketItemToFirebase(item: MarketItem) {
+  try {
+    await setDoc(doc(db, 'marketplace', item.id), item);
+  } catch (err) {
+    console.warn('saveMarketItemToFirebase fallback:', err);
+  }
+}
+
+export async function updateMarketItemInFirebase(itemId: string, partial: Partial<MarketItem>) {
+  try {
+    await updateDoc(doc(db, 'marketplace', itemId), partial);
+  } catch (err) {
+    console.warn('updateMarketItemInFirebase fallback:', err);
+  }
+}
+
+export async function deleteMarketItemFromFirebase(itemId: string) {
+  try {
+    await deleteDoc(doc(db, 'marketplace', itemId));
+  } catch (err) {
+    console.warn('deleteMarketItemFromFirebase fallback:', err);
   }
 }
 
