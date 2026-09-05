@@ -15,7 +15,8 @@ import {
   Megaphone,
   Sparkles,
   Smile,
-  AlertTriangle
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
@@ -27,6 +28,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     votePoll,
     savedPostIds,
     toggleSavePost,
+    deletePost,
     openModal,
     showToast,
     setSelectedSchoolId,
@@ -179,6 +181,21 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>Report Content</span>
               </button>
+
+              {(post.authorId === currentUser.id || currentUser.role === 'super_admin') && (
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this post?')) {
+                      deletePost(post.id);
+                    }
+                    setShowMoreMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 border-t border-neutral-100 font-bold"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Post</span>
+                </button>
+              )}
             </div>
           )}
         </div>

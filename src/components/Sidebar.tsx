@@ -13,7 +13,9 @@ import {
   Trophy,
   ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Brain,
+  ShoppingBag
 } from 'lucide-react';
 
 export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseMobileMenu }) => {
@@ -37,6 +39,8 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
     { id: 'communities', label: 'Clubs & Societies', icon: Users },
     { id: 'events', label: 'Events & Grants', icon: Calendar },
     { id: 'chat', label: 'Direct Messages', icon: MessageSquare },
+    { id: 'studybuddy', label: 'AI Study Buddy', icon: Brain, badge: 'AI' },
+    { id: 'marketplace', label: 'Campus Marketplace', icon: ShoppingBag, badge: 'New' },
     { id: 'profile', label: 'My Profile', icon: UserCheck }
   ];
 
@@ -113,14 +117,24 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
         {isSuperAdmin && (
           <button
             id="sidebar-platform-admin-btn"
-            onClick={() => openModal('super_admin')}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
+            onClick={() => handleNavClick('admin')}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'admin'
+                ? 'bg-neutral-900 text-white shadow-sm'
+                : 'text-purple-700 hover:bg-purple-50'
+            }`}
           >
             <div className="flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-purple-600" />
-              <span>Super Admin</span>
+              <ShieldCheck className={`w-5 h-5 ${activeTab === 'admin' ? 'text-white' : 'text-purple-600'}`} />
+              <span>Admin Console</span>
             </div>
-            <span className="text-[10px] bg-purple-100 px-2 py-0.5 rounded-full font-bold">CONSOLE</span>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                activeTab === 'admin' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-800'
+              }`}
+            >
+              SUPER
+            </span>
           </button>
         )}
       </nav>

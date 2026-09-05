@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
@@ -17,6 +12,9 @@ import { CommunitiesView } from './components/Communities/CommunitiesView';
 import { ChatView } from './components/Chat/ChatView';
 import { EventsAndOpportunitiesView } from './components/Events/EventsAndOpportunitiesView';
 import { ProfileView } from './components/Profile/ProfileView';
+import { AdminDashboardView } from './components/Admin/AdminDashboardView';
+import { StudyBuddyView } from './components/StudyBuddy/StudyBuddyView';
+import { MarketplaceView } from './components/Marketplace/MarketplaceView';
 import { LoginView } from './components/Auth/LoginView';
 import { GraduationCap } from 'lucide-react';
 
@@ -111,10 +109,13 @@ const AppContent: React.FC = () => {
           {activeTab === 'chat' && <ChatView />}
           {activeTab === 'events' && <EventsAndOpportunitiesView />}
           {activeTab === 'profile' && <ProfileView />}
+          {activeTab === 'admin' && <AdminDashboardView />}
+          {activeTab === 'studybuddy' && <StudyBuddyView />}
+          {activeTab === 'marketplace' && <MarketplaceView />}
         </main>
 
         {/* Right Info & Widgets Sidebar (Visible on large desktop) */}
-        {activeTab !== 'chat' && activeTab !== 'reels' && <RightSidebar />}
+        {activeTab !== 'chat' && activeTab !== 'reels' && activeTab !== 'admin' && activeTab !== 'studybuddy' && activeTab !== 'marketplace' && <RightSidebar />}
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
@@ -131,7 +132,7 @@ const AppContent: React.FC = () => {
       {activeModal === 'share' && <ShareModal />}
       {activeModal === 'edit_profile' && <EditProfileModal />}
       {activeModal === 'school_admin' && <SchoolAdminModal />}
-      {activeModal === 'platform_admin' && <PlatformAdminModal />}
+      {(activeModal === 'platform_admin' || activeModal === 'super_admin') && <PlatformAdminModal />}
       {activeModal === 'auth' && <AuthModal />}
 
       {/* Toast Notifications System */}

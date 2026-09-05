@@ -14,7 +14,9 @@ import {
   X,
   LogIn,
   LogOut,
-  CloudCheck
+  CloudCheck,
+  Moon,
+  Sun
 } from 'lucide-react';
 
 export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpen?: boolean }> = ({
@@ -43,6 +45,25 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('cc_dark_mode');
+    const dark = saved === 'true';
+    if (dark) document.documentElement.classList.add('dark');
+    return dark;
+  });
+
+  const toggleDarkMode = () => {
+    setIsDarkMode((prev) => {
+      const next = !prev;
+      if (next) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('cc_dark_mode', String(next));
+      return next;
+    });
+  };
 
   // Fix #9: refs for click-outside detection
   const notifRef = useRef<HTMLDivElement>(null);
@@ -255,6 +276,21 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
             )}
           </div>
 
+          {/* Dark Mode Toggle Button */}
+          <button
+            id="dark-mode-toggle-btn"
+            onClick={toggleDarkMode}
+            className="p-2 rounded-full text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Midnight Dark Mode'}
+            aria-label="Toggle Theme"
+          >
+            {isDarkMode ? (
+              <Sun className="w-5 h-5 text-amber-400 animate-in spin-in-180 duration-300" />
+            ) : (
+              <Moon className="w-5 h-5 text-neutral-600 hover:text-indigo-600 transition-colors" />
+            )}
+          </button>
+
           {/* User Persona Switcher & Profile Dropdown */}
           <div className="relative" ref={userMenuRef}>
             {!isFirebaseAuthActive && currentUser.id === 'guest' ? (
@@ -376,13 +412,16 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                   {isSuperAdmin && (
                     <button
                       onClick={() => {
-                        openModal('super_admin');
+                        setActiveTab('admin');
                         setShowUserMenu(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-xs font-medium text-purple-700 hover:bg-purple-50 rounded-lg flex items-center gap-1.5"
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50 rounded-lg flex items-center justify-between"
                     >
-                      <Shield className="w-3.5 h-3.5" />
-                      <span>Super Admin Dashboard</span>
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Admin Command Center</span>
+                      </div>
+                      <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-black">SUPER</span>
                     </button>
                   )}
                 </div>

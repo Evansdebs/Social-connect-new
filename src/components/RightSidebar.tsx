@@ -1,11 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Trophy, TrendingUp, UserPlus, Check, Flame, ChevronRight } from 'lucide-react';
+import { Challenge } from '../types';
+import { Trophy, TrendingUp, UserPlus, Check, Flame, Zap, Swords } from 'lucide-react';
+import { ChallengeArenaModal } from './Modals/ChallengeArenaModal';
 
 export const RightSidebar: React.FC = () => {
   const {
     challenges,
-    voteChallenge,
+    cheerChallenge,
     users,
     currentUser,
     connectedUserIds,
@@ -15,7 +17,9 @@ export const RightSidebar: React.FC = () => {
     posts
   } = useApp();
 
-  const activeChallenge = challenges[0];
+  const [arenaChallenge, setArenaChallenge] = useState<Challenge | null>(null);
+
+  const activeChallenge = challenges.find((c) => c.status === 'active') || challenges[0];
 
   const candidateUsers = users.filter(
     (u) => u.id !== currentUser.id && u.role !== 'super_admin'
@@ -44,209 +48,213 @@ export const RightSidebar: React.FC = () => {
   }, [posts]);
 
   return (
-    <aside className="w-80 shrink-0 hidden xl:flex flex-col gap-4 py-4 select-none">
-      {/* Inter-School Challenge Live Spotlight */}
-      {activeChallenge && (
-        <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-1.5 text-amber-600 font-bold text-xs uppercase tracking-wider">
-              <Trophy className="w-4 h-4 text-amber-500" />
-              <span>Inter-School Arena</span>
-            </div>
-            <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold animate-pulse">
-              LIVE DERBY
-            </span>
-          </div>
+    <>
+      <aside className="w-80 shrink-0 hidden xl:flex flex-col gap-4 py-4 select-none">
+        {/* Inter-School Arena Live Spotlight */}
+        {activeChallenge && (
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 p-4 shadow-lg overflow-hidden relative">
+            {/* Glow */}
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
-          <h4 className="font-bold text-sm text-neutral-900 leading-snug mb-1">
-            {activeChallenge.title}
-          </h4>
-          <p className="text-[11px] text-neutral-500 mb-3 line-clamp-2">
-            {activeChallenge.description}
-          </p>
-
-          {/* School Faceoff Visual */}
-          <div className="bg-neutral-50 rounded-xl p-2.5 border border-neutral-100 mb-3">
-            <div className="flex items-center justify-between gap-2 text-xs font-semibold mb-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <img
-                  src={activeChallenge.schoolA.logo}
-                  alt={activeChallenge.schoolA.name}
-                  className="w-6 h-6 rounded-md object-cover"
-                />
-                <span className="truncate text-[11px] text-neutral-800">
-                  {activeChallenge.schoolA.name}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-amber-400" />
+                  <span className="text-amber-400 font-black text-xs uppercase tracking-wider">Arena</span>
+                </div>
+                <span className="text-[9px] bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse inline-block" />
+                  LIVE
                 </span>
               </div>
-              <span className="text-neutral-400 text-xs font-bold">VS</span>
-              <div className="flex items-center gap-1.5 min-w-0 justify-end">
-                <span className="truncate text-[11px] text-neutral-800">
-                  {activeChallenge.schoolB.name}
-                </span>
-                <img
-                  src={activeChallenge.schoolB.logo}
-                  alt={activeChallenge.schoolB.name}
-                  className="w-6 h-6 rounded-md object-cover"
-                />
-              </div>
-            </div>
 
-            {/* Live Cheer Progress Bar */}
-            {(() => {
-              const total = (activeChallenge.schoolA.votes + activeChallenge.schoolB.votes) || 1;
-              const pctA = Math.round((activeChallenge.schoolA.votes / total) * 100);
-              const pctB = 100 - pctA;
-              return (
-                <div>
-                  <div className="h-2 w-full bg-neutral-200 rounded-full overflow-hidden flex">
-                    <div
-                      style={{ width: `${pctA}%` }}
-                      className="bg-blue-600 h-full transition-all duration-500"
-                    />
-                    <div
-                      style={{ width: `${pctB}%` }}
-                      className="bg-indigo-600 h-full transition-all duration-500"
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] font-bold text-neutral-500 mt-1">
-                    <span className="text-blue-700">{pctA}% ({activeChallenge.schoolA.votes})</span>
-                    <span className="text-indigo-700">{pctB}% ({activeChallenge.schoolB.votes})</span>
+              {/* Stage badge */}
+              {activeChallenge.stage && (
+                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-2 inline-block">
+                  {activeChallenge.stage}
+                </span>
+              )}
+
+              <h4 className="font-black text-sm text-white leading-snug mb-1 line-clamp-2">
+                {activeChallenge.title}
+              </h4>
+
+              {/* Schools face-off */}
+              <div className="flex items-center gap-2 my-3">
+                <div className="flex-1 text-center">
+                  <img src={activeChallenge.schoolA.logo} alt={activeChallenge.schoolA.name}
+                    className="w-8 h-8 rounded-xl object-cover mx-auto mb-1 ring-2 ring-blue-500/40"
+                    onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${activeChallenge.schoolA.id}`; }} />
+                  <p className="text-[9px] text-slate-300 font-bold line-clamp-1">{activeChallenge.schoolA.name.split(' ')[0]}</p>
+                  <p className="text-sm font-black text-white">{(activeChallenge.schoolA.cheers || activeChallenge.schoolA.votes).toLocaleString()}</p>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-7 h-7 bg-slate-700 border border-slate-600 rounded-lg flex items-center justify-center">
+                    <Swords className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                 </div>
-              );
-            })()}
-          </div>
-
-          {/* Cheering Actions */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              id="cheer-school-a-btn"
-              onClick={() => voteChallenge(activeChallenge.id, activeChallenge.schoolA.id)}
-              disabled={!!activeChallenge.userVotedFor}
-              className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-colors truncate ${
-                activeChallenge.userVotedFor === activeChallenge.schoolA.id
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50'
-              }`}
-            >
-              {activeChallenge.userVotedFor === activeChallenge.schoolA.id ? '✓ Cheered!' : 'Cheer School A'}
-            </button>
-            <button
-              id="cheer-school-b-btn"
-              onClick={() => voteChallenge(activeChallenge.id, activeChallenge.schoolB.id)}
-              disabled={!!activeChallenge.userVotedFor}
-              className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-colors truncate ${
-                activeChallenge.userVotedFor === activeChallenge.schoolB.id
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50'
-              }`}
-            >
-              {activeChallenge.userVotedFor === activeChallenge.schoolB.id ? '✓ Cheered!' : 'Cheer School B'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Trending Topics & Hashtags */}
-      <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5 text-neutral-800 font-bold text-xs uppercase tracking-wider">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
-            <span>Trending on Campus</span>
-          </div>
-          <Flame className="w-4 h-4 text-orange-500" />
-        </div>
-
-        <div className="space-y-2.5">
-          {trendingTopics.map((topic, i) => (
-            <div
-              key={i}
-              onClick={() => {
-                setSearchQuery(topic.tag);
-                setActiveTab('discover');
-              }}
-              className="cursor-pointer group flex flex-col p-1.5 rounded-lg hover:bg-neutral-50 transition-colors"
-            >
-              <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                <span>{topic.category}</span>
-                <span>{topic.postsCount}</span>
+                <div className="flex-1 text-center">
+                  <img src={activeChallenge.schoolB.logo} alt={activeChallenge.schoolB.name}
+                    className="w-8 h-8 rounded-xl object-cover mx-auto mb-1 ring-2 ring-purple-500/40"
+                    onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${activeChallenge.schoolB.id}`; }} />
+                  <p className="text-[9px] text-slate-300 font-bold line-clamp-1">{activeChallenge.schoolB.name.split(' ')[0]}</p>
+                  <p className="text-sm font-black text-white">{(activeChallenge.schoolB.cheers || activeChallenge.schoolB.votes).toLocaleString()}</p>
+                </div>
               </div>
-              <p className="font-bold text-xs text-neutral-900 group-hover:text-blue-600 transition-colors">
-                {topic.tag}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* People You May Know (Cross-Campus Discovery) */}
-      <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-bold text-xs uppercase tracking-wider text-neutral-800">
-            People You May Know
-          </p>
-          <span className="text-[10px] text-neutral-400">Cross-Campus</span>
-        </div>
-
-        {candidateUsers.length > 0 ? (
-          <div className="space-y-3">
-            {candidateUsers.slice(0, 3).map((user) => {
-              const isConnected = connectedUserIds.includes(user.id);
-              return (
-                <div key={user.id} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <img
-                      src={user.avatar}
-                      alt={user.name}
-                      className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
-                      <p className="text-[10px] text-blue-600 truncate">{user.schoolName}</p>
-                      <p className="text-[10px] text-neutral-400 truncate">
-                        {(user.creatorTalents || []).slice(0, 2).join(' • ')}
-                      </p>
+              {/* Battle bar */}
+              {(() => {
+                const cA = activeChallenge.schoolA.cheers || activeChallenge.schoolA.votes || 0;
+                const cB = activeChallenge.schoolB.cheers || activeChallenge.schoolB.votes || 0;
+                const total = cA + cB || 1;
+                const pctA = Math.round((cA / total) * 100);
+                const pctB = 100 - pctA;
+                return (
+                  <div className="mb-3">
+                    <div className="h-2 w-full rounded-full overflow-hidden flex">
+                      <div style={{ width: `${pctA}%` }} className="bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-500" />
+                      <div style={{ width: `${pctB}%` }} className="bg-gradient-to-l from-purple-600 to-fuchsia-500 transition-all duration-500" />
+                    </div>
+                    <div className="flex justify-between text-[9px] font-bold mt-0.5">
+                      <span className="text-blue-400">{pctA}%</span>
+                      <span className="text-slate-500">{activeChallenge.totalCheeringCount.toLocaleString()} fans</span>
+                      <span className="text-purple-400">{pctB}%</span>
                     </div>
                   </div>
+                );
+              })()}
 
-                  <button
-                    id={`connect-user-${user.id}-btn`}
-                    onClick={() => requestConnection(user.id)}
-                    className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 ${
-                      isConnected
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700'
-                    }`}
-                    title={isConnected ? 'Connected' : 'Send Connection Request'}
-                  >
-                    {isConnected ? (
-                      <>
-                        <Check className="w-3 h-3 text-emerald-600" />
-                        <span className="text-[10px]">Connected</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-3 h-3" />
-                        <span className="text-[10px]">Connect</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              );
-            })}
+              {/* Quick Cheer + Enter Arena */}
+              <div className="grid grid-cols-2 gap-1.5 mb-2">
+                <button id="sidebar-cheer-a-btn"
+                  onClick={() => cheerChallenge(activeChallenge.id, activeChallenge.schoolA.id)}
+                  className="py-1.5 text-[10px] font-black rounded-xl bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/40 transition-all flex items-center justify-center gap-1">
+                  <Zap className="w-3 h-3" /> {activeChallenge.schoolA.name.split(' ')[0]}
+                </button>
+                <button id="sidebar-cheer-b-btn"
+                  onClick={() => cheerChallenge(activeChallenge.id, activeChallenge.schoolB.id)}
+                  className="py-1.5 text-[10px] font-black rounded-xl bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/40 transition-all flex items-center justify-center gap-1">
+                  <Zap className="w-3 h-3" /> {activeChallenge.schoolB.name.split(' ')[0]}
+                </button>
+              </div>
+              <button id="enter-arena-btn"
+                onClick={() => setArenaChallenge(activeChallenge)}
+                className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5" /> Enter Full Arena
+              </button>
+            </div>
           </div>
-        ) : (
-          <p className="text-xs text-neutral-500 text-center py-2">
-            New students joining Campus Connect will appear here.
-          </p>
         )}
-      </div>
 
-      {/* Footer Meta */}
-      <div className="px-2 text-[11px] text-neutral-400 space-y-1">
-        <p>© 2026 Campus Connect • School Community Network</p>
-        <p className="text-[10px]">Safe social media for schools, clubs, students & creators.</p>
-      </div>
-    </aside>
+        {/* Trending Topics & Hashtags */}
+        <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1.5 text-neutral-800 font-bold text-xs uppercase tracking-wider">
+              <TrendingUp className="w-4 h-4 text-blue-600" />
+              <span>Trending on Campus</span>
+            </div>
+            <Flame className="w-4 h-4 text-orange-500" />
+          </div>
+
+          <div className="space-y-2.5">
+            {trendingTopics.map((topic, i) => (
+              <div
+                key={i}
+                onClick={() => {
+                  setSearchQuery(topic.tag);
+                  setActiveTab('discover');
+                }}
+                className="cursor-pointer group flex flex-col p-1.5 rounded-lg hover:bg-neutral-50 transition-colors"
+              >
+                <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                  <span>{topic.category}</span>
+                  <span>{topic.postsCount}</span>
+                </div>
+                <p className="font-bold text-xs text-neutral-900 group-hover:text-blue-600 transition-colors">
+                  {topic.tag}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* People You May Know (Cross-Campus Discovery) */}
+        <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-bold text-xs uppercase tracking-wider text-neutral-800">
+              People You May Know
+            </p>
+            <span className="text-[10px] text-neutral-400">Cross-Campus</span>
+          </div>
+
+          {candidateUsers.length > 0 ? (
+            <div className="space-y-3">
+              {candidateUsers.slice(0, 3).map((user) => {
+                const isConnected = connectedUserIds.includes(user.id);
+                return (
+                  <div key={user.id} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
+                        <p className="text-[10px] text-blue-600 truncate">{user.schoolName}</p>
+                        <p className="text-[10px] text-neutral-400 truncate">
+                          {(user.creatorTalents || []).slice(0, 2).join(' • ')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      id={`connect-user-${user.id}-btn`}
+                      onClick={() => requestConnection(user.id)}
+                      className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 ${
+                        isConnected
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700'
+                      }`}
+                      title={isConnected ? 'Connected' : 'Send Connection Request'}
+                    >
+                      {isConnected ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span className="text-[10px]">Connected</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-3 h-3" />
+                          <span className="text-[10px]">Connect</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500 text-center py-2">
+              New students joining Campus Connect will appear here.
+            </p>
+          )}
+        </div>
+
+        {/* Footer Meta */}
+        <div className="px-2 text-[11px] text-neutral-400 space-y-1">
+          <p>© 2026 Campus Connect • School Community Network</p>
+          <p className="text-[10px]">Safe social media for schools, clubs, students & creators.</p>
+        </div>
+      </aside>
+
+      {/* Arena Modal */}
+      {arenaChallenge && (
+        <ChallengeArenaModal
+          challenge={arenaChallenge}
+          onClose={() => setArenaChallenge(null)}
+        />
+      )}
+    </>
   );
 };

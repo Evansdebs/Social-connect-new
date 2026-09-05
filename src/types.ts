@@ -192,6 +192,17 @@ export interface GroupClub {
   leadTeacherOrAdmin?: string;
 }
 
+export interface ChallengeHypeMessage {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  authorSchool: string;
+  schoolCheered: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface Challenge {
   id: string;
   title: string;
@@ -202,17 +213,32 @@ export interface Challenge {
     name: string;
     logo: string;
     votes: number;
+    cheers?: number;
   };
   schoolB: {
     id: string;
     name: string;
     logo: string;
     votes: number;
+    cheers?: number;
   };
   userVotedFor?: string;
   endDate: string;
   status: 'active' | 'completed';
   totalCheeringCount: number;
+  stage?: 'Grand Finals' | 'Semifinals' | 'Quarterfinals' | 'League Derby';
+  prizeOrTrophy?: string;
+  hypeMessages?: ChallengeHypeMessage[];
+}
+
+export interface EventAttendee {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string;
+  schoolName: string;
+  checkedIn?: boolean;
+  ticketCode?: string;
 }
 
 export interface CampusEvent {
@@ -230,6 +256,9 @@ export interface CampusEvent {
   interestedCount: number;
   goingCount: number;
   userStatus?: 'interested' | 'going' | null;
+  attendees?: EventAttendee[];
+  checkedInUserIds?: string[];
+  eventCode?: string;
 }
 
 export interface Opportunity {
@@ -309,8 +338,47 @@ export interface ReportItem {
   targetType: 'post' | 'reel' | 'user' | 'comment';
   targetId: string;
   reportedBy: string;
+  reporterId?: string;
   reason: string;
   details?: string;
   timestamp: string;
+  createdAt?: string;
   status: 'pending' | 'investigating' | 'resolved' | 'dismissed';
+}
+
+export interface AdminAuditLog {
+  id: string;
+  adminId: string;
+  adminName: string;
+  action: string;
+  target: string;
+  details?: string;
+  timestamp: string;
+}
+export interface GroupMessage {
+  id: string;
+  channelId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatar: string;
+  senderSchool: string;
+  text: string;
+  mediaUrl?: string;
+  timestamp: string;
+  reactions?: { emoji: string; count: number }[];
+}
+
+export interface ClubChannel {
+  id: string;
+  clubId: string;
+  clubName: string;
+  clubCategory: string;
+  coverImage: string;
+  description: string;
+  membersCount: number;
+  isJoined: boolean;
+  messages: GroupMessage[];
+  lastMessage?: string;
+  lastMessageTime?: string;
+  unreadCount?: number;
 }

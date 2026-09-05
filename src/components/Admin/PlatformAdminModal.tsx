@@ -39,7 +39,8 @@ export const PlatformAdminModal: React.FC = () => {
     schoolStaff,
     assignSchoolStaff,
     removeSchoolStaff,
-    currentUser
+    currentUser,
+    setActiveTab: setNavTab
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'reports' | 'users' | 'schools' | 'stats'>('reports');
@@ -127,12 +128,23 @@ export const PlatformAdminModal: React.FC = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={closeModal}
-            className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                closeModal();
+                setNavTab('admin');
+              }}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors hidden sm:block"
+            >
+              Open Full Command Center
+            </button>
+            <button
+              onClick={closeModal}
+              className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -195,7 +207,7 @@ export const PlatformAdminModal: React.FC = () => {
                           <strong>Details:</strong> {rep.details || 'No additional comment provided.'}
                         </p>
                         <p className="text-[10px] text-neutral-400 mt-1">
-                          Reported by User #{rep.reporterId} • Created: {rep.createdAt}
+                          Reported by User #{rep.reportedBy || rep.reporterId} • Created: {rep.timestamp || rep.createdAt || 'Recent'}
                         </p>
                       </div>
 

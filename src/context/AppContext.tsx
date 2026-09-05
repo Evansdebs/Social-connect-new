@@ -15,7 +15,11 @@ import {
   SchoolMemoryAlbum,
   ReportItem,
   SchoolStaffRecord,
-  SchoolStaffPermissions
+  SchoolStaffPermissions,
+  AdminAuditLog,
+  UserRole,
+  ClubChannel,
+  GroupMessage
 } from '../types';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -58,7 +62,14 @@ import {
 } from '../lib/firestoreService';
 import {
   DEFAULT_GUEST_USER,
-  DEFAULT_BLANK_SCHOOL
+  DEFAULT_BLANK_SCHOOL,
+  DEMO_ADMIN_USER,
+  DEMO_STUDENT_USER,
+  DEMO_TEACHER_USER,
+  INITIAL_DEMO_SCHOOLS,
+  INITIAL_DEMO_CHALLENGES,
+  INITIAL_DEMO_EVENTS,
+  INITIAL_DEMO_OPPORTUNITIES
 } from '../data/initialData';
 
 export type ActiveTab =
@@ -70,7 +81,9 @@ export type ActiveTab =
   | 'events'
   | 'chat'
   | 'profile'
-  | 'admin';
+  | 'admin'
+  | 'studybuddy'
+  | 'marketplace';
 
 export type ModalType =
   | 'create_post'
@@ -89,6 +102,7 @@ export type ModalType =
 interface AppContextType {
   currentUser: User;
   users: User[];
+  allUsers: User[];
   isFirebaseAuthActive: boolean;
   firebaseUserEmail: string | null;
   isAuthenticated: boolean;
@@ -99,20 +113,25 @@ interface AppContextType {
   switchUser: (userId: string) => void;
   updateCurrentUserProfile: (updatedData: Partial<User>) => void;
   updateUserStatus: (userId: string, status: 'active' | 'suspended') => void;
+  updateUserRole: (userId: string, role: UserRole) => void;
   toggleUserVerification: (userId: string) => void;
   deleteUserAccount: (userId: string) => void;
   schools: School[];
   selectedSchoolId: string | null;
   setSelectedSchoolId: (id: string | null) => void;
   addSchool: (school: School) => void;
-  updateSchool: (schoolId: string, partial: Partial<School>) => void;
+  updateSchool: ((schoolId: string, partial: Partial<School>) => void) & ((school: School) => void);
   deleteSchool: (schoolId: string) => void;
   activeSchool: School;
   schoolStaff: SchoolStaffRecord[];
   isSchoolAuthorized: (schoolId?: string) => boolean;
   getSchoolPermissions: (schoolId?: string) => SchoolStaffPermissions | null;
-  assignSchoolStaff: (record: Omit<SchoolStaffRecord, 'id' | 'assignedAt'>) => void;
+  assignSchoolStaff: ((record: Omit<SchoolStaffRecord, 'id' | 'assignedAt'>) => void) & ((schoolId: string, userId: string, permissions?: any, title?: string) => void);
   removeSchoolStaff: (staffId: string) => void;
+  dismissReport: (reportId: string) => void;
+  auditLogs: AdminAuditLog[];
+  addAuditLog: (action: string, target: string, details?: string) => void;
+  clearAuditLogs: () => void;
   isPostsLoading: boolean;
   posts: Post[];
   createPost: (post: Omit<Post, 'id' | 'likesCount' | 'likedByUser' | 'commentsCount' | 'sharesCount' | 'repostsCount' | 'createdAt'>) => void;
@@ -138,8 +157,12 @@ interface AppContextType {
   deleteClub: (clubId: string) => void;
   challenges: Challenge[];
   voteChallenge: (challengeId: string, schoolId: string) => void;
+  cheerChallenge: (challengeId: string, schoolId: string) => void;
+  addChallengeHype: (challengeId: string, text: string) => void;
+  createChallenge: (challenge: Challenge) => void;
   events: CampusEvent[];
   toggleRsvpEvent: (eventId: string, status: 'interested' | 'going' | null) => void;
+  checkInEvent: (eventId: string) => void;
   opportunities: Opportunity[];
   toggleSaveOpportunity: (oppId: string) => void;
   conversations: Conversation[];
@@ -147,6 +170,11 @@ interface AppContextType {
   setActiveConversationId: (id: string | null) => void;
   sendMessage: (conversationId: string, text: string, mediaUrl?: string) => void;
   startDirectMessage: (user: User) => void;
+  clubChannels: ClubChannel[];
+  activeChannelId: string | null;
+  setActiveChannelId: (id: string | null) => void;
+  sendGroupMessage: (channelId: string, text: string) => void;
+  toggleJoinChannel: (channelId: string) => void;
   notifications: NotificationItem[];
   markNotificationRead: (notifId: string) => void;
   unreadNotifCount: number;
@@ -194,16 +222,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Firestore-backed collections (posts, stories, etc.) start empty and are
   // populated exclusively by real-time Firestore listeners — preventing the
   // stale-localStorage-overrides-fresh-Firestore conflict.
-  const [users, setUsers] = useState<User[]>([]);
+  // Base users: Start with curated demo users so initial browse works immediately
+  const [users, setUsers] = useState<User[]>([
+    DEMO_ADMIN_USER,
+    DEMO_STUDENT_USER,
+    DEMO_TEACHER_USER
+  ]);
 
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
     return localStorage.getItem('cc_current_user_id') || '';
   });
 
-  const [schools, setSchools] = useState<School[]>([]);
+  const [schools, setSchools] = useState<School[]>(INITIAL_DEMO_SCHOOLS);
 
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(() => {
-    return localStorage.getItem('cc_selected_school_id') || null;
+    return localStorage.getItem('cc_selected_school_id') || INITIAL_DEMO_SCHOOLS[0].id;
+  });
+
+  // Admin audit logs tracking
+  const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>(() => {
+    const saved = localStorage.getItem('cc_admin_audit_logs');
+    return saved
+      ? JSON.parse(saved)
+      : [
+          {
+            id: 'init-audit-1',
+            adminId: 'super-admin-1',
+            adminName: 'Platform Administrator',
+            action: 'System Security Console Initialized',
+            target: 'Platform Governance Hub',
+            details: 'Campus Connect administration console active.',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ];
   });
 
   const [isPostsLoading, setIsPostsLoading] = useState<boolean>(true);
@@ -212,9 +263,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [stories, setStories] = useState<Story[]>([]);
   const [reels, setReels] = useState<Reel[]>([]);
   const [clubs, setClubs] = useState<GroupClub[]>([]);
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [events, setEvents] = useState<CampusEvent[]>([]);
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>(INITIAL_DEMO_CHALLENGES);
+  const [events, setEvents] = useState<CampusEvent[]>(INITIAL_DEMO_EVENTS);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(INITIAL_DEMO_OPPORTUNITIES);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [reports, setReports] = useState<ReportItem[]>([]);
@@ -253,6 +304,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [clubChannels, setClubChannels] = useState<ClubChannel[]>([
+    {
+      id: 'channel-robotics',
+      clubId: 'club-robotics',
+      clubName: 'Inter-School Robotics League',
+      clubCategory: 'STEM & Technology',
+      coverImage: 'https://images.unsplash.com/photo-1561144257-e32e8506b5cc?w=400&auto=format&fit=crop&q=80',
+      description: 'Official channel for the Inter-School Robotics League. Share builds, ideas & competition updates!',
+      membersCount: 284,
+      isJoined: false,
+      messages: [
+        { id: 'gm-1', channelId: 'channel-robotics', senderId: 'demo-student-1', senderName: 'Kwame Mensah', senderAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80', senderSchool: 'Achimota Senior High', text: 'Just finished the chassis for our bot! 🤖 Competition is in 2 weeks.', timestamp: '10:24 AM' },
+        { id: 'gm-2', channelId: 'channel-robotics', senderId: 'demo-teacher-1', senderName: 'Dr. Evelyn Addo', senderAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80', senderSchool: 'PRESEC', text: 'Excellent work Kwame! Has everyone submitted their technical spec sheets?', timestamp: '10:31 AM' },
+      ],
+      lastMessage: 'Has everyone submitted their technical spec sheets?',
+      lastMessageTime: '10:31 AM',
+      unreadCount: 2
+    },
+    {
+      id: 'channel-debate',
+      clubId: 'club-debate',
+      clubName: 'National Debate Society',
+      clubCategory: 'Public Speaking',
+      coverImage: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=400&auto=format&fit=crop&q=80',
+      description: 'Official channel for the National Debate Society. Motions, practice sessions & tournament news!',
+      membersCount: 156,
+      isJoined: false,
+      messages: [
+        { id: 'gm-3', channelId: 'channel-debate', senderId: 'super-admin-1', senderName: 'Platform Administrator', senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80', senderSchool: 'Campus Connect', text: '📢 New debate motion released: "AI should replace teachers in secondary schools." Prep your cases!', timestamp: '9:00 AM' },
+      ],
+      lastMessage: 'New debate motion released',
+      lastMessageTime: '9:00 AM',
+      unreadCount: 1
+    },
+    {
+      id: 'channel-arts',
+      clubId: 'club-arts',
+      clubName: 'Campus Arts & Creative Collective',
+      clubCategory: 'Arts & Culture',
+      coverImage: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&auto=format&fit=crop&q=80',
+      description: 'Share your art, music, photography, poetry, and creative projects with fellow campus creators.',
+      membersCount: 412,
+      isJoined: false,
+      messages: [
+        { id: 'gm-4', channelId: 'channel-arts', senderId: 'demo-student-1', senderName: 'Kwame Mensah', senderAvatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80', senderSchool: 'Achimota Senior High', text: 'Just dropped my new digital artwork for the campus art show! 🎨', timestamp: '8:45 AM' },
+      ],
+      lastMessage: 'Just dropped my new digital artwork!',
+      lastMessageTime: '8:45 AM',
+      unreadCount: 0
+    }
+  ]);
   const [schoolMemories] = useState<SchoolMemoryAlbum[]>([]);
 
 
@@ -475,7 +578,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     users.find((u) => u.id === currentUserId) || DEFAULT_GUEST_USER;
 
   const isAuthenticated: boolean = Boolean(
-    isFirebaseAuthActive &&
+    (isFirebaseAuthActive || currentUserId.startsWith('demo-') || currentUserId.startsWith('super-admin')) &&
     currentUserId &&
     currentUserId !== 'guest' &&
     currentUser &&
@@ -556,21 +659,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return staffRecord ? staffRecord.permissions : null;
   };
 
-  const assignSchoolStaff = (record: Omit<SchoolStaffRecord, 'id' | 'assignedAt'>) => {
-    const newRecord: SchoolStaffRecord = {
-      ...record,
-      id: `staff-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      assignedAt: new Date().toISOString()
+  const addAuditLog = (action: string, target: string, details?: string) => {
+    const log: AdminAuditLog = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      adminId: currentUser.id,
+      adminName: currentUser.name,
+      action,
+      target,
+      details,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     };
-    setSchoolStaff((prev) => [newRecord, ...prev.filter(s => !(s.userId === record.userId && s.schoolId === record.schoolId))]);
-    saveSchoolStaffToFirebase(newRecord);
-    showToast(`Assigned ${record.userName} as representative for ${record.schoolName}!`, 'success');
+    setAuditLogs((prev) => {
+      const updated = [log, ...prev].slice(0, 100);
+      try {
+        localStorage.setItem('cc_admin_audit_logs', JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
+  };
+
+  const clearAuditLogs = () => {
+    setAuditLogs([]);
+    localStorage.removeItem('cc_admin_audit_logs');
+    showToast('Audit logs cleared.', 'info');
+  };
+
+  const assignSchoolStaff = (
+    recordOrSchoolId: Omit<SchoolStaffRecord, 'id' | 'assignedAt'> | string,
+    userId?: string,
+    permissions?: any,
+    title?: string
+  ) => {
+    let finalRecord: SchoolStaffRecord;
+    if (typeof recordOrSchoolId === 'string') {
+      const sId = recordOrSchoolId;
+      const uId = userId || '';
+      const schoolObj = schools.find((s) => s.id === sId);
+      const userObj = users.find((u) => u.id === uId);
+      finalRecord = {
+        id: `staff-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        schoolId: sId,
+        schoolName: schoolObj?.name || sId,
+        userId: uId,
+        userName: userObj?.name || `User ${uId}`,
+        userUsername: userObj?.username || 'staff',
+        permissions:
+          typeof permissions === 'object' && permissions !== null && !Array.isArray(permissions)
+            ? permissions
+            : {
+                manageSchoolProfile: true,
+                createSchoolPosts: true,
+                manageSchoolEvents: true
+              },
+        assignedAt: new Date().toISOString()
+      };
+    } else {
+      finalRecord = {
+        ...recordOrSchoolId,
+        id: `staff-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        assignedAt: new Date().toISOString()
+      };
+    }
+    setSchoolStaff((prev) => [
+      finalRecord,
+      ...prev.filter((s) => !(s.userId === finalRecord.userId && s.schoolId === finalRecord.schoolId))
+    ]);
+    saveSchoolStaffToFirebase(finalRecord);
+    addAuditLog('Assigned School Staff', `${finalRecord.userName} → ${finalRecord.schoolName}`, title);
+    showToast(`Assigned ${finalRecord.userName} as representative for ${finalRecord.schoolName}!`, 'success');
   };
 
   const removeSchoolStaff = (staffId: string) => {
+    const record = schoolStaff.find((s) => s.id === staffId);
     setSchoolStaff((prev) => prev.filter((s) => s.id !== staffId));
     deleteSchoolStaffFromFirebase(staffId);
+    addAuditLog('Revoked School Staff', record?.userName || staffId, `From ${record?.schoolName || 'school'}`);
     showToast('School staff authorization revoked.', 'info');
+  };
+
+  const updateUserRole = (userId: string, role: UserRole) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, role } : u))
+    );
+    updateUserInFirebase(userId, { role });
+    addAuditLog('Role Updated', `User #${userId}`, `New role: ${role}`);
+    showToast(`User role updated to ${role.replace('_', ' ').toUpperCase()}.`, 'success');
   };
 
   const updateUserStatus = (userId: string, status: 'active' | 'suspended') => {
@@ -578,6 +751,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((u) => (u.id === userId ? { ...u, accountStatus: status } : u))
     );
     updateUserInFirebase(userId, { accountStatus: status });
+    addAuditLog('Account Status Updated', `User #${userId}`, `Status set to ${status}`);
     showToast(`User account status set to ${status}.`, 'info');
   };
 
@@ -587,6 +761,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (u.id !== userId) return u;
         const newVer = !u.isVerified;
         updateUserInFirebase(userId, { isVerified: newVer });
+        addAuditLog('Verification Toggled', `${u.name} (@${u.username})`, newVer ? 'Verified' : 'Unverified');
         showToast(newVer ? `Granted verified status to ${u.name}` : `Removed verified status from ${u.name}`, 'info');
         return { ...u, isVerified: newVer };
       })
@@ -594,8 +769,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteUserAccount = (userId: string) => {
+    const target = users.find((u) => u.id === userId);
     setUsers((prev) => prev.filter((u) => u.id !== userId));
     deleteUserFromFirebase(userId);
+    addAuditLog('Deleted User Account', target?.name || userId, target?.email);
     showToast('User account removed permanently.', 'info');
   };
 
@@ -608,26 +785,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [school, ...prev];
     });
     saveSchoolToFirebase(school);
+    addAuditLog('Added School', school.name, `${school.location} • ${school.studentCount} students`);
   };
 
-  const updateSchool = (schoolId: string, partial: Partial<School>) => {
+  const updateSchool = (schoolIdOrSchool: string | School, partial?: Partial<School>) => {
+    let schoolId: string;
+    let updates: Partial<School>;
+    if (typeof schoolIdOrSchool === 'string') {
+      schoolId = schoolIdOrSchool;
+      updates = partial || {};
+    } else {
+      schoolId = schoolIdOrSchool.id;
+      updates = schoolIdOrSchool;
+    }
+
     setSchools((prev) =>
-      prev.map((s) => (s.id === schoolId ? { ...s, ...partial } : s))
+      prev.map((s) => (s.id === schoolId ? { ...s, ...updates } : s))
     );
     const existing = schools.find((s) => s.id === schoolId);
     if (existing) {
-      saveSchoolToFirebase({ ...existing, ...partial });
+      saveSchoolToFirebase({ ...existing, ...updates });
+      addAuditLog('Updated School', existing.name);
     }
-    showToast('School updated successfully.', 'success');
+    showToast('School profile updated successfully.', 'success');
   };
 
   const deleteSchool = (schoolId: string) => {
+    const target = schools.find((s) => s.id === schoolId);
     setSchools((prev) => prev.filter((s) => s.id !== schoolId));
     deleteSchoolFromFirebase(schoolId);
     if (selectedSchoolId === schoolId) {
-      setSelectedSchoolId(null);
+      setSelectedSchoolId(schools[0]?.id || null);
     }
+    addAuditLog('Deleted School', target?.name || schoolId);
     showToast('School removed.', 'info');
+  };
+
+  const dismissReport = (reportId: string) => {
+    resolveReport(reportId, 'dismissed');
+    addAuditLog('Dismissed Report', `Report #${reportId}`);
   };
 
   const deletePost = (postId: string) => {
@@ -916,6 +1112,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const cheerChallenge = (challengeId: string, schoolId: string) => {
+    setChallenges((prev) =>
+      prev.map((ch) => {
+        if (ch.id !== challengeId) return ch;
+        const isA = ch.schoolA.id === schoolId;
+        const updatedA = isA ? { ...ch.schoolA, cheers: (ch.schoolA.cheers || 0) + 1 } : ch.schoolA;
+        const updatedB = !isA ? { ...ch.schoolB, cheers: (ch.schoolB.cheers || 0) + 1 } : ch.schoolB;
+        const newTotal = ch.totalCheeringCount + 1;
+        updateChallengeInFirebase(challengeId, { schoolA: updatedA, schoolB: updatedB, totalCheeringCount: newTotal });
+        return { ...ch, schoolA: updatedA, schoolB: updatedB, totalCheeringCount: newTotal };
+      })
+    );
+  };
+
+  const addChallengeHype = (challengeId: string, text: string) => {
+    if (!text.trim()) return;
+    const hypeMsg = {
+      id: `hype-${Date.now()}`,
+      authorId: currentUserId,
+      authorName: currentUser.name,
+      authorAvatar: currentUser.avatar,
+      authorSchool: currentUser.schoolName,
+      schoolCheered: currentUser.schoolName,
+      text: text.trim(),
+      timestamp: 'Just now'
+    };
+    setChallenges((prev) =>
+      prev.map((ch) => {
+        if (ch.id !== challengeId) return ch;
+        const updated = { ...ch, hypeMessages: [...(ch.hypeMessages || []), hypeMsg] };
+        updateChallengeInFirebase(challengeId, { hypeMessages: updated.hypeMessages });
+        return updated;
+      })
+    );
+  };
+
+  const createChallenge = (challenge: Challenge) => {
+    setChallenges((prev) => [challenge, ...prev]);
+    updateChallengeInFirebase(challenge.id, challenge);
+    showToast(`Tournament "${challenge.title}" created! 🏆`, 'success');
+  };
+
+  const sendGroupMessage = (channelId: string, text: string) => {
+    if (!text.trim()) return;
+    const newMsg: GroupMessage = {
+      id: `gm-${Date.now()}`,
+      channelId,
+      senderId: currentUserId,
+      senderName: currentUser.name,
+      senderAvatar: currentUser.avatar,
+      senderSchool: currentUser.schoolName,
+      text: text.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setClubChannels((prev) =>
+      prev.map((ch) =>
+        ch.id === channelId
+          ? { ...ch, messages: [...ch.messages, newMsg], lastMessage: text.trim(), lastMessageTime: newMsg.timestamp, unreadCount: 0 }
+          : ch
+      )
+    );
+  };
+
+  const toggleJoinChannel = (channelId: string) => {
+    setClubChannels((prev) =>
+      prev.map((ch) => {
+        if (ch.id !== channelId) return ch;
+        const joining = !ch.isJoined;
+        showToast(joining ? `Joined ${ch.clubName}! 🎉` : `Left ${ch.clubName}`, joining ? 'success' : 'info');
+        return { ...ch, isJoined: joining, membersCount: ch.membersCount + (joining ? 1 : -1) };
+      })
+    );
+  };
+
   const toggleRsvpEvent = (eventId: string, status: 'interested' | 'going' | null) => {
     setEvents((prev) =>
       prev.map((ev) => {
@@ -940,11 +1210,75 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         showToast(status ? `RSVP saved as ${status}!` : 'RSVP cancelled', 'success');
+        let updatedAttendees = ev.attendees ? [...ev.attendees] : [];
+        if (status === 'going') {
+          if (!updatedAttendees.some((a) => a.id === currentUser.id)) {
+            updatedAttendees.unshift({
+              id: currentUser.id,
+              name: currentUser.name,
+              username: currentUser.username,
+              avatar: currentUser.avatar,
+              schoolName: currentUser.schoolName || 'Campus Member',
+              checkedIn: false,
+              ticketCode: `${ev.eventCode || 'PASS'}-${Math.floor(1000 + Math.random() * 9000)}`
+            });
+          }
+        } else if (oldStatus === 'going') {
+          updatedAttendees = updatedAttendees.filter((a) => a.id !== currentUser.id);
+        }
+
         return {
           ...ev,
           interestedCount: finalInterested,
           goingCount: finalGoing,
-          userStatus: status
+          userStatus: status,
+          attendees: updatedAttendees
+        };
+      })
+    );
+  };
+
+  const checkInEvent = (eventId: string) => {
+    setEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id !== eventId) return ev;
+        const alreadyCheckedIn = ev.checkedInUserIds?.includes(currentUser.id);
+        const newCheckedInIds = alreadyCheckedIn
+          ? ev.checkedInUserIds?.filter((id) => id !== currentUser.id) || []
+          : [...(ev.checkedInUserIds || []), currentUser.id];
+
+        let updatedAttendees = ev.attendees ? [...ev.attendees] : [];
+        const existingAttendeeIndex = updatedAttendees.findIndex((a) => a.id === currentUser.id);
+        if (existingAttendeeIndex >= 0) {
+          updatedAttendees[existingAttendeeIndex] = {
+            ...updatedAttendees[existingAttendeeIndex],
+            checkedIn: !alreadyCheckedIn
+          };
+        } else {
+          updatedAttendees.unshift({
+            id: currentUser.id,
+            name: currentUser.name,
+            username: currentUser.username,
+            avatar: currentUser.avatar,
+            schoolName: currentUser.schoolName || 'Campus Member',
+            checkedIn: true,
+            ticketCode: `${ev.eventCode || 'PASS'}-${Math.floor(1000 + Math.random() * 9000)}`
+          });
+        }
+
+        showToast(
+          alreadyCheckedIn
+            ? 'Checked out of event pass'
+            : `🎟️ Checked into ${ev.title}! Pass verified.`,
+          'success'
+        );
+
+        return {
+          ...ev,
+          userStatus: 'going',
+          goingCount: ev.userStatus === 'going' ? ev.goingCount : ev.goingCount + 1,
+          checkedInUserIds: newCheckedInIds,
+          attendees: updatedAttendees
         };
       })
     );
@@ -1117,6 +1451,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentUser,
         users,
+        allUsers: users,
         isFirebaseAuthActive,
         firebaseUserEmail,
         isAuthenticated,
@@ -1127,6 +1462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchUser,
         updateCurrentUserProfile,
         updateUserStatus,
+        updateUserRole,
         toggleUserVerification,
         deleteUserAccount,
         schools,
@@ -1141,6 +1477,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getSchoolPermissions,
         assignSchoolStaff,
         removeSchoolStaff,
+        dismissReport,
+        auditLogs,
+        addAuditLog,
+        clearAuditLogs,
         isPostsLoading,
         posts: postsWithLikes,
         createPost,
@@ -1166,8 +1506,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteClub,
         challenges,
         voteChallenge,
+        cheerChallenge,
+        addChallengeHype,
+        createChallenge,
         events,
         toggleRsvpEvent,
+        checkInEvent,
         opportunities,
         toggleSaveOpportunity,
         conversations,
@@ -1175,6 +1519,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveConversationId,
         sendMessage,
         startDirectMessage,
+        clubChannels,
+        activeChannelId,
+        setActiveChannelId,
+        sendGroupMessage,
+        toggleJoinChannel,
         notifications,
         markNotificationRead,
         unreadNotifCount,
