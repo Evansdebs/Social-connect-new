@@ -12,12 +12,17 @@ import {
   ExternalLink,
   Film,
   Calendar,
-  Sparkles
+  Sparkles,
+  Check,
+  Clock,
+  UserPlus,
+  X
 } from 'lucide-react';
 import { PostCard } from '../Feed/PostCard';
 
 export const DiscoverView: React.FC = () => {
   const {
+    currentUser,
     searchQuery,
     setSearchQuery,
     users,
@@ -30,8 +35,15 @@ export const DiscoverView: React.FC = () => {
     voteChallenge,
     setSelectedSchoolId,
     setActiveTab,
+    viewProfile,
+    openAvatarPreview,
     requestConnection,
-    connectedUserIds
+    connectedUserIds,
+    sentConnectionRequestUserIds,
+    incomingConnectionRequests,
+    acceptConnectionRequest,
+    declineConnectionRequest,
+    cancelConnectionRequest
   } = useApp();
 
   const [activeFilter, setActiveFilter] = useState<
@@ -40,13 +52,14 @@ export const DiscoverView: React.FC = () => {
 
   const query = searchQuery.toLowerCase().trim();
 
-  // Search filter logic
+  // Search filter logic - Exclude current user from discover/explore user list
   const filteredUsers = users.filter(
     (u) =>
-      u.name.toLowerCase().includes(query) ||
-      u.username.toLowerCase().includes(query) ||
-      u.schoolName.toLowerCase().includes(query) ||
-      u.creatorTalents.some((t) => t.toLowerCase().includes(query))
+      u.id !== currentUser.id &&
+      (u.name.toLowerCase().includes(query) ||
+        u.username.toLowerCase().includes(query) ||
+        u.schoolName.toLowerCase().includes(query) ||
+        u.creatorTalents.some((t) => t.toLowerCase().includes(query)))
   );
 
   const filteredSchools = schools.filter(
@@ -340,7 +353,13 @@ export const DiscoverView: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredUsers.map((u) => {
+              if (u.id === currentUser.id) return null;
               const isConnected = connectedUserIds.includes(u.id);
+              const isPendingSent = sentConnectionRequestUserIds.includes(u.id);
+              const incomingReq = incomingConnectionRequests.find(
+                (r) => r.fromUserId === u.id
+              );
+
               return (
                 <div
                   key={u.id}
@@ -350,11 +369,33 @@ export const DiscoverView: React.FC = () => {
                     <img
                       src={u.avatar}
                       alt={u.name}
-                      className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
+                      onClick={() =>
+                        openAvatarPreview({
+                          name: u.name,
+                          username: u.username,
+                          avatar: u.avatar,
+                          school: u.schoolName,
+                          userId: u.id
+                        })
+                      }
+                      title="Tap to open profile picture"
+                      className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500"
                     />
                     <div className="min-w-0">
-                      <p className="font-bold text-xs text-neutral-900 truncate">{u.name}</p>
-                      <p className="text-[10px] text-neutral-500 truncate">@{u.username}</p>
+                      <p
+                        onClick={() => viewProfile(u.id)}
+                        title="View profile"
+                        className="font-bold text-xs text-neutral-900 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                      >
+                        {u.name}
+                      </p>
+                      <p
+                        onClick={() => viewProfile(u.id)}
+                        title="View profile"
+                        className="text-[10px] text-neutral-500 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                      >
+                        @{u.username}
+                      </p>
                       <p className="text-[10px] text-blue-600 font-semibold truncate">
                         🏫 {u.schoolName}
                       </p>
@@ -372,16 +413,45 @@ export const DiscoverView: React.FC = () => {
                     ))}
                   </div>
 
-                  <button
-                    onClick={() => requestConnection(u.id)}
-                    className={`w-full py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      isConnected
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                  >
-                    {isConnected ? '✓ Connected' : 'Connect'}
-                  </button>
+                  {isConnected ? (
+                    <span className="w-full py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center gap-1">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Connected
+                    </span>
+                  ) : incomingReq ? (
+                    <div className="flex gap-1.5 w-full">
+                      <button
+                        onClick={() => acceptConnectionRequest(incomingReq.id)}
+                        className="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 shadow-xs transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Accept
+                      </button>
+                      <button
+                        onClick={() => declineConnectionRequest(incomingReq.id)}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-neutral-200 hover:bg-neutral-300 text-neutral-700 flex items-center justify-center transition-colors"
+                        title="Decline"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : isPendingSent ? (
+                    <button
+                      onClick={() => cancelConnectionRequest(u.id)}
+                      className="w-full py-1.5 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 flex items-center justify-center gap-1 transition-colors"
+                      title="Click to cancel pending connection request"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                      Pending (Cancel)
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => requestConnection(u.id)}
+                      className="w-full py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Connect
+                    </button>
+                  )}
                 </div>
               );
             })}

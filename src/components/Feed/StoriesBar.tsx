@@ -4,7 +4,7 @@ import { Story } from '../../types';
 import { Plus, Sparkles, X, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 
 export const StoriesBar: React.FC = () => {
-  const { stories, currentUser, openModal, markStoryViewed } = useApp();
+  const { stories, currentUser, openModal, markStoryViewed, viewProfile, openAvatarPreview } = useApp();
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [storyLiked, setStoryLiked] = useState(false);
 
@@ -120,11 +120,29 @@ export const StoriesBar: React.FC = () => {
                 <img
                   src={activeStory.authorAvatar}
                   alt={activeStory.authorName}
-                  className="w-9 h-9 rounded-full object-cover border border-white/40"
+                  onClick={() => {
+                    openAvatarPreview({
+                      name: activeStory.authorName,
+                      avatar: activeStory.authorAvatar,
+                      school: activeStory.authorSchool,
+                      userId: activeStory.authorId
+                    });
+                  }}
+                  title="Tap to open profile picture"
+                  className="w-9 h-9 rounded-full object-cover border border-white/40 cursor-pointer hover:ring-2 hover:ring-blue-400"
                 />
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-bold text-xs text-white">{activeStory.authorName}</p>
+                    <p
+                      onClick={() => {
+                        setActiveStoryIndex(null);
+                        viewProfile(activeStory.authorId);
+                      }}
+                      title="View profile"
+                      className="font-bold text-xs text-white cursor-pointer hover:underline hover:text-blue-200"
+                    >
+                      {activeStory.authorName}
+                    </p>
                     <span className="text-[10px] text-blue-300 bg-blue-900/60 px-1.5 py-0.5 rounded">
                       {activeStory.authorSchool}
                     </span>

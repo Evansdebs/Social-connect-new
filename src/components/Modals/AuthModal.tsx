@@ -20,10 +20,12 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { saveUserToFirebase, getUserFromFirebase, saveSchoolToFirebase } from '../../lib/firestoreService';
 import { User, UserRole, UserType, School } from '../../types';
+import { RequestSchoolModal } from './RequestSchoolModal';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -40,13 +42,41 @@ export const AuthModal: React.FC = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [userType, setUserType] = useState<UserType>('student');
-  const [selectedSchoolId, setSelectedSchoolId] = useState(schools[0]?.id || 'custom');
-  const [customSchoolName, setCustomSchoolName] = useState('');
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(schools[0]?.id || '');
+  const [showRequestSchoolModal, setShowRequestSchoolModal] = useState<boolean>(false);
+  const [requestedSchoolNotice, setRequestedSchoolNotice] = useState<string>('');
   const [classLevel, setClassLevel] = useState('Senior Secondary (Year 12)');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSuccessNotice, setResetSuccessNotice] = useState<string | null>(null);
 
   const selectedSchool = schools.find((s) => s.id === selectedSchoolId);
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setErrorMsg('Please enter your email address to receive a password reset link.');
+      return;
+    }
+    setResetLoading(true);
+    setErrorMsg(null);
+    setResetSuccessNotice(null);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setResetSuccessNotice(`Password reset instructions sent to ${email.trim()}! Please check your inbox or spam folder.`);
+      showToast('Password reset link sent to your email!', 'success');
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        setErrorMsg('No registered account was found with this email address.');
+      } else if (err.code === 'auth/invalid-email') {
+        setErrorMsg('Please enter a valid email address format.');
+      } else {
+        setErrorMsg('Could not send reset email. Please try again.');
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,39 +134,63 @@ export const AuthModal: React.FC = () => {
           return;
         }
 
-        let finalSchoolId = selectedSchool?.id;
-        let finalSchoolName = selectedSchool?.name;
+        let finalSchoolId = selectedSchool?.id || '';
+        let finalSchoolName = selectedSchool?.name || (requestedSchoolNotice ? `Pending Approval: ${requestedSchoolNotice}` : 'Independent Member');
 
-        if (!finalSchoolId || selectedSchoolId === 'custom') {
-          const sName = customSchoolName.trim() || 'My Campus';
-          finalSchoolId = `school-${Date.now()}`;
-          finalSchoolName = sName;
-
-          const newSchool: School = {
-            id: finalSchoolId,
-            name: sName,
-            username: sName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-            location: 'Main Campus',
-            region: 'Regional Campus',
-            website: 'https://campusconnect.edu',
-            established: new Date().getFullYear(),
-            studentCount: 1,
-            followersCount: 1,
-            logo: `https://api.dicebear.com/7.x/identicon/svg?seed=${finalSchoolId}`,
-            coverImage: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-            description: `Official Campus Connect community for ${sName}`,
-            motto: 'Knowledge, Integrity & Excellence',
-            isVerified: true,
-            rankings: {
-              activeRank: schools.length + 1,
-              challengeWins: 0,
-              popularityScore: 90
+        let userCred;
+        try {
+          userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        } catch (createErr: any) {
+          if (createErr.code === 'auth/email-already-in-use') {
+            // Gracefully sign in existing user if the password matches
+            try {
+              const signInCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+              const existingFbUser = signInCred.user;
+              let existingProfile = await getUserFromFirebase(existingFbUser.uid);
+              if (!existingProfile) {
+                existingProfile = {
+                  id: existingFbUser.uid,
+                  name: existingFbUser.displayName || name.trim() || email.split('@')[0],
+                  username: (existingFbUser.displayName || name.trim() || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '_'),
+                  email: existingFbUser.email || email.trim(),
+                  role: 'user',
+                  userType: userType,
+                  accountStatus: 'active',
+                  avatar: existingFbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${existingFbUser.uid}`,
+                  coverImage: selectedSchool?.coverImage || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
+                  bio: `${userType === 'student' ? 'Student' : userType === 'teacher' ? 'Faculty Teacher' : 'Member'} at ${finalSchoolName}. Passionate about learning and collaboration!`,
+                  schoolId: finalSchoolId,
+                  schoolName: finalSchoolName,
+                  classLevel: classLevel.trim(),
+                  interests: ['Academics', 'Campus Life', 'Leadership'],
+                  creatorTalents: ['Campus Member'],
+                  badges: ['Verified Member', finalSchoolName],
+                  followersCount: 0,
+                  followingCount: 0,
+                  connectionsCount: 0,
+                  isVerified: false,
+                  isPrivate: false,
+                  allowDownloads: true,
+                  whoCanMessage: 'everyone',
+                  whoCanConnect: 'everyone'
+                };
+                await saveUserToFirebase(existingProfile);
+              }
+              setAuthUser(existingProfile);
+              showToast(`Welcome back, ${existingProfile.name}! Signed into your account.`, 'success');
+              closeModal();
+              return;
+            } catch (authSignInErr: any) {
+              // Password didn't match existing account; toggle to signin mode and prompt user
+              setMode('signin');
+              setErrorMsg('An account with this email already exists. Please enter your existing password to sign in, or click "Forgot password" below.');
+              setLoading(false);
+              return;
             }
-          };
-          addSchool(newSchool);
+          }
+          throw createErr;
         }
 
-        const userCred = await createUserWithEmailAndPassword(auth, email.trim(), password);
         const fbUser = userCred.user;
 
         await updateProfile(fbUser, {
@@ -176,12 +230,25 @@ export const AuthModal: React.FC = () => {
         closeModal();
       }
     } catch (err: any) {
-      console.error('Firebase Auth error:', err);
+      const standardAuthCodes = [
+        'auth/email-already-in-use',
+        'auth/invalid-credential',
+        'auth/wrong-password',
+        'auth/user-not-found',
+        'auth/weak-password',
+        'auth/invalid-email',
+        'auth/popup-closed-by-user',
+        'auth/cancelled-popup-request'
+      ];
+      if (!standardAuthCodes.includes(err?.code)) {
+        console.warn('Firebase Auth notice:', err);
+      }
+
       let message = err.message || 'Authentication failed';
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        message = 'Invalid email or password.';
+        message = 'Invalid email or password. Please verify your credentials or reset your password.';
       } else if (err.code === 'auth/email-already-in-use') {
-        message = 'An account with this email already exists. Try signing in.';
+        message = 'An account with this email already exists. Please sign in instead.';
       } else if (err.code === 'auth/weak-password') {
         message = 'Password should be at least 6 characters.';
       } else if (err.code === 'auth/invalid-email') {
@@ -304,10 +371,41 @@ export const AuthModal: React.FC = () => {
 
         {/* Form Body */}
         <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          {resetSuccessNotice && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-start gap-2 animate-in fade-in duration-200">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+              <span className="font-medium">{resetSuccessNotice}</span>
+            </div>
+          )}
+
           {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex flex-col gap-2 animate-in fade-in duration-200">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                <span className="font-medium flex-1">{errorMsg}</span>
+              </div>
+              {errorMsg.toLowerCase().includes('already exists') && (
+                <div className="flex items-center gap-2 pt-1 border-t border-rose-200/60 pl-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('signin');
+                      setErrorMsg('Please enter your password to sign in to this account.');
+                    }}
+                    className="px-2.5 py-1 bg-neutral-900 text-white font-bold rounded-lg text-[11px] hover:bg-neutral-800 cursor-pointer shadow-xs transition-colors"
+                  >
+                    Sign In to this Account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    disabled={resetLoading}
+                    className="px-2.5 py-1 bg-white text-neutral-700 border border-neutral-300 font-bold rounded-lg text-[11px] hover:bg-neutral-50 cursor-pointer transition-colors"
+                  >
+                    {resetLoading ? 'Sending...' : 'Reset Password'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -382,38 +480,45 @@ export const AuthModal: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="font-bold text-neutral-700 block mb-1">Campus School</label>
+                    <label className="font-bold text-neutral-700 block mb-1">Campus School (Optional)</label>
                     <select
                       value={selectedSchoolId}
                       onChange={(e) => setSelectedSchoolId(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500 truncate"
+                      className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:border-blue-500 truncate text-xs"
                     >
+                      <option value="">No School Selected (Optional / Skip for now)</option>
                       {schools.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name}
+                          {s.name} {s.location ? `(${s.location})` : ''}
                         </option>
                       ))}
-                      <option value="custom">+ Register School</option>
                     </select>
                   </div>
                 </div>
 
-                {(schools.length === 0 || selectedSchoolId === 'custom') && (
-                  <div>
-                    <label className="font-bold text-neutral-700 block mb-1">Campus / Institution Name</label>
-                    <div className="relative">
-                      <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                      <input
-                        type="text"
-                        required
-                        value={customSchoolName}
-                        onChange={(e) => setCustomSchoolName(e.target.value)}
-                        placeholder="e.g., University of Ghana or Achimota School"
-                        className="w-full pl-9 pr-3 py-2 bg-neutral-50 border border-neutral-200 rounded-xl outline-none focus:bg-white focus:border-blue-500"
-                      />
-                    </div>
+                {requestedSchoolNotice && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between">
+                    <span>
+                      School addition request sent for <strong>{requestedSchoolNotice}</strong>. Admin will review and add it to the system.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setRequestedSchoolNotice('')}
+                      className="text-emerald-700 hover:text-emerald-900 font-bold ml-2"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowRequestSchoolModal(true)}
+                  className="w-full py-2 px-3 rounded-xl border border-dashed border-blue-300 bg-blue-50/60 hover:bg-blue-100/60 text-blue-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Can't find your school? Send a request to Admin</span>
+                </button>
 
                 <div>
                   <label className="font-bold text-neutral-700 block mb-1">Grade / Level</label>
@@ -444,7 +549,17 @@ export const AuthModal: React.FC = () => {
             </div>
 
             <div>
-              <label className="font-bold text-neutral-700 block mb-1">Password</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-neutral-700 block">Password</label>
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={resetLoading}
+                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  {resetLoading ? 'Sending link...' : 'Forgot password?'}
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                 <input
@@ -478,6 +593,17 @@ export const AuthModal: React.FC = () => {
           </form>
         </div>
       </div>
+
+      <RequestSchoolModal
+        isOpen={showRequestSchoolModal}
+        onClose={() => setShowRequestSchoolModal(false)}
+        defaultName={name}
+        defaultEmail={email}
+        onSubmitted={(reqName) => {
+          setRequestedSchoolNotice(reqName);
+          setSelectedSchoolId('');
+        }}
+      />
     </div>
   );
 };

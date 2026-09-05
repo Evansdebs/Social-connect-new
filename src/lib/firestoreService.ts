@@ -8,6 +8,7 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  where,
   limit
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -25,7 +26,9 @@ import {
   User,
   School,
   ReportItem,
-  SchoolStaffRecord
+  SchoolStaffRecord,
+  ConnectionRequest,
+  SchoolRequest
 } from '../types';
 
 // No seeded dummy data - production relies solely on real user accounts and creations
@@ -249,6 +252,16 @@ export async function updatePostInFirebase(postId: string, partial: Partial<Post
 export async function deletePostFromFirebase(postId: string) {
   try {
     await deleteDoc(doc(db, 'posts', postId));
+    // Also clean up any post comments in Firestore
+    try {
+      const q = query(collection(db, 'comments'), where('postId', '==', postId));
+      const snapshot = await getDocs(q);
+      snapshot.forEach(async (d) => {
+        await deleteDoc(doc(db, 'comments', d.id));
+      });
+    } catch {
+      // Ignored if comments cleanup encounters offline mode
+    }
   } catch (err) {
     console.warn('deletePostFromFirebase offline fallback:', err);
   }
@@ -479,3 +492,135 @@ export async function deleteSchoolStaffFromFirebase(staffId: string) {
     console.warn('deleteSchoolStaffFromFirebase fallback:', err);
   }
 }
+
+// -------------------------------------------------------------
+// Notifications & Connection Requests
+// -------------------------------------------------------------
+
+export function subscribeToNotifications(onUpdate: (notifications: NotificationItem[]) => void) {
+  try {
+    const q = query(collection(db, 'notifications'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: NotificationItem[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as NotificationItem);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore notifications snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export async function saveNotificationToFirebase(notif: NotificationItem) {
+  try {
+    await setDoc(doc(db, 'notifications', notif.id), notif);
+  } catch (err) {
+    console.warn('saveNotificationToFirebase fallback:', err);
+  }
+}
+
+export async function updateNotificationInFirebase(notifId: string, partial: Partial<NotificationItem>) {
+  try {
+    await updateDoc(doc(db, 'notifications', notifId), partial);
+  } catch (err) {
+    console.warn('updateNotificationInFirebase fallback:', err);
+  }
+}
+
+export function subscribeToConnectionRequests(onUpdate: (requests: ConnectionRequest[]) => void) {
+  try {
+    const q = query(collection(db, 'connectionRequests'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: ConnectionRequest[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as ConnectionRequest);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore connectionRequests snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export async function saveConnectionRequestToFirebase(req: ConnectionRequest) {
+  try {
+    await setDoc(doc(db, 'connectionRequests', req.id), req);
+  } catch (err) {
+    console.warn('saveConnectionRequestToFirebase fallback:', err);
+  }
+}
+
+export async function updateConnectionRequestInFirebase(reqId: string, partial: Partial<ConnectionRequest>) {
+  try {
+    await updateDoc(doc(db, 'connectionRequests', reqId), partial);
+  } catch (err) {
+    console.warn('updateConnectionRequestInFirebase fallback:', err);
+  }
+}
+
+export async function deleteConnectionRequestFromFirebase(reqId: string) {
+  try {
+    await deleteDoc(doc(db, 'connectionRequests', reqId));
+  } catch (err) {
+    console.warn('deleteConnectionRequestFromFirebase fallback:', err);
+  }
+}
+
+// -------------------------------------------------------------
+// School Addition Requests from Students / Users
+// -------------------------------------------------------------
+
+export function subscribeToSchoolRequests(onUpdate: (requests: SchoolRequest[]) => void) {
+  try {
+    const q = query(collection(db, 'schoolRequests'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: SchoolRequest[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as SchoolRequest);
+        });
+        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore schoolRequests snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export async function saveSchoolRequestToFirebase(req: SchoolRequest) {
+  try {
+    await setDoc(doc(db, 'schoolRequests', req.id), req);
+  } catch (err) {
+    console.warn('saveSchoolRequestToFirebase fallback:', err);
+  }
+}
+
+export async function updateSchoolRequestInFirebase(reqId: string, partial: Partial<SchoolRequest>) {
+  try {
+    await updateDoc(doc(db, 'schoolRequests', reqId), partial);
+  } catch (err) {
+    console.warn('updateSchoolRequestInFirebase fallback:', err);
+  }
+}
+
+export async function deleteSchoolRequestFromFirebase(reqId: string) {
+  try {
+    await deleteDoc(doc(db, 'schoolRequests', reqId));
+  } catch (err) {
+    console.warn('deleteSchoolRequestFromFirebase fallback:', err);
+  }
+}
+
+

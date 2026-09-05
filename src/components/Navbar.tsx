@@ -8,7 +8,6 @@ import {
   Shield,
   GraduationCap,
   Sparkles,
-  Check,
   RotateCcw,
   Menu,
   X,
@@ -16,7 +15,9 @@ import {
   LogOut,
   CloudCheck,
   Moon,
-  Sun
+  Sun,
+  Check,
+  UserPlus
 } from 'lucide-react';
 
 export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpen?: boolean }> = ({
@@ -25,8 +26,6 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
 }) => {
   const {
     currentUser,
-    users,
-    switchUser,
     isFirebaseAuthActive,
     firebaseUserEmail,
     signOutUser,
@@ -40,7 +39,14 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
     openModal,
     searchQuery,
     setSearchQuery,
-    resetDemoData
+    resetDemoData,
+    connectedUserIds,
+    incomingConnectionRequests,
+    acceptConnectionRequest,
+    declineConnectionRequest,
+    viewProfile,
+    clearViewingUser,
+    openAvatarPreview
   } = useApp();
 
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -241,36 +247,105 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                 </div>
 
                 <div className="max-h-80 overflow-y-auto divide-y divide-neutral-50">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      onClick={() => {
-                        markNotificationRead(n.id);
-                        setShowNotifMenu(false);
-                      }}
-                      className={`px-4 py-3 hover:bg-neutral-50 flex items-start gap-3 cursor-pointer transition-colors ${
-                        !n.isRead ? 'bg-blue-50/50' : ''
-                      }`}
-                    >
-                      <img
-                        src={n.senderAvatar}
-                        alt={n.senderName}
-                        className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-neutral-800 leading-snug">
-                          <span className="font-semibold text-neutral-900">{n.senderName}</span>{' '}
-                          {n.content}
-                        </p>
-                        <span className="text-[10px] text-neutral-400 mt-1 block">
-                          {n.timestamp}
-                        </span>
-                      </div>
-                      {!n.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />
-                      )}
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-neutral-400 text-xs">
+                      No notifications yet
                     </div>
-                  ))}
+                  ) : (
+                    notifications.map((n) => {
+                      const isConnReq = n.type === 'connection_request';
+                      const pendingReq = isConnReq
+                        ? incomingConnectionRequests.find(
+                            (r) => r.id === n.requestId || r.fromUserId === n.senderId
+                          )
+                        : null;
+                      const isAlreadyConnected = n.senderId
+                        ? connectedUserIds.includes(n.senderId)
+                        : false;
+
+                      return (
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            markNotificationRead(n.id);
+                          }}
+                          className={`px-4 py-3 hover:bg-neutral-50 flex items-start gap-3 transition-colors ${
+                            !n.isRead ? 'bg-blue-50/50' : ''
+                          }`}
+                        >
+                          <img
+                            src={n.senderAvatar}
+                            alt={n.senderName}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openAvatarPreview({
+                                name: n.senderName,
+                                avatar: n.senderAvatar,
+                                userId: n.senderId
+                              });
+                            }}
+                            title="Tap to open profile picture"
+                            className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0 mt-0.5 cursor-pointer hover:ring-2 hover:ring-blue-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-neutral-800 leading-snug">
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markNotificationRead(n.id);
+                                  setShowNotifMenu(false);
+                                  viewProfile(n.senderId);
+                                }}
+                                title="View profile"
+                                className="font-semibold text-neutral-900 cursor-pointer hover:text-blue-600 hover:underline"
+                              >
+                                {n.senderName}
+                              </span>{' '}
+                              {n.content}
+                            </p>
+                            <span className="text-[10px] text-neutral-400 mt-1 block">
+                              {n.timestamp}
+                            </span>
+
+                            {/* Pending connection request action buttons */}
+                            {pendingReq && !isAlreadyConnected && (
+                              <div className="flex items-center gap-1.5 mt-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    acceptConnectionRequest(pendingReq.id);
+                                    markNotificationRead(n.id);
+                                  }}
+                                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1 transition-colors"
+                                >
+                                  <Check className="w-3 h-3" /> Accept
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    declineConnectionRequest(pendingReq.id);
+                                    markNotificationRead(n.id);
+                                  }}
+                                  className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-semibold text-xs rounded-lg flex items-center gap-1 transition-colors"
+                                >
+                                  <X className="w-3 h-3" /> Decline
+                                </button>
+                              </div>
+                            )}
+
+                            {isConnReq && isAlreadyConnected && (
+                              <div className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                                <Check className="w-3 h-3" /> Connected Friends
+                              </div>
+                            )}
+                          </div>
+                          {!n.isRead && (
+                            <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
@@ -389,13 +464,29 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                 <div className="p-1 border-b border-neutral-100">
                   <button
                     onClick={() => {
-                      setActiveTab('profile');
+                      clearViewingUser();
                       setShowUserMenu(false);
                     }}
                     className="w-full text-left px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-100 rounded-lg flex items-center justify-between"
                   >
                     <span>View My Profile</span>
                     <span className="text-neutral-400 text-[10px]">@{currentUser.username}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      openAvatarPreview({
+                        name: currentUser.name,
+                        username: currentUser.username,
+                        avatar: currentUser.avatar,
+                        school: currentUser.schoolName,
+                        userId: currentUser.id
+                      });
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg flex items-center justify-between"
+                  >
+                    <span>View Profile Picture</span>
+                    <span className="text-blue-500 text-[10px]">Photo</span>
                   </button>
                   {isSchoolAuthorized(currentUser.schoolId) && (
                     <button
@@ -425,44 +516,6 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
                     </button>
                   )}
                 </div>
-
-                {/* Switch Profile Options - Only if multiple profiles exist */}
-                {users.length > 1 && (
-                  <div className="p-1">
-                    <p className="px-3 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                      Switch Profile
-                    </p>
-                    {users.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          switchUser(u.id);
-                          setShowUserMenu(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
-                          u.id === currentUser.id
-                            ? 'bg-blue-50 text-blue-700 font-semibold'
-                            : 'text-neutral-700 hover:bg-neutral-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <img
-                            src={u.avatar}
-                            alt={u.name}
-                            className="w-6 h-6 rounded-full object-cover shrink-0"
-                          />
-                          <div className="truncate text-left">
-                            <p className="truncate font-medium">{u.name}</p>
-                            <p className="text-[10px] text-neutral-400 truncate">
-                              {u.role === 'super_admin' ? 'SUPER ADMIN' : `USER${u.userType ? ` • ${u.userType}` : ''}`} • {u.schoolName || 'Platform'}
-                            </p>
-                          </div>
-                        </div>
-                        {u.id === currentUser.id && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
 
                 {/* Reset Data */}
                 <div className="pt-2 mt-1 border-t border-neutral-100 px-2">

@@ -1,7 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Challenge } from '../types';
-import { Trophy, TrendingUp, UserPlus, Check, Flame, Zap, Swords } from 'lucide-react';
+import {
+  Trophy,
+  TrendingUp,
+  UserPlus,
+  Check,
+  Flame,
+  Zap,
+  Swords,
+  Clock,
+  X
+} from 'lucide-react';
 import { ChallengeArenaModal } from './Modals/ChallengeArenaModal';
 
 export const RightSidebar: React.FC = () => {
@@ -11,9 +21,16 @@ export const RightSidebar: React.FC = () => {
     users,
     currentUser,
     connectedUserIds,
+    sentConnectionRequestUserIds,
+    incomingConnectionRequests,
     requestConnection,
+    acceptConnectionRequest,
+    declineConnectionRequest,
+    cancelConnectionRequest,
     setActiveTab,
     setSearchQuery,
+    viewProfile,
+    openAvatarPreview,
     posts
   } = useApp();
 
@@ -53,7 +70,6 @@ export const RightSidebar: React.FC = () => {
         {/* Inter-School Arena Live Spotlight */}
         {activeChallenge && (
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 p-4 shadow-lg overflow-hidden relative">
-            {/* Glow */}
             <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
             <div className="relative z-10">
@@ -68,7 +84,6 @@ export const RightSidebar: React.FC = () => {
                 </span>
               </div>
 
-              {/* Stage badge */}
               {activeChallenge.stage && (
                 <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-2 inline-block">
                   {activeChallenge.stage}
@@ -79,7 +94,6 @@ export const RightSidebar: React.FC = () => {
                 {activeChallenge.title}
               </h4>
 
-              {/* Schools face-off */}
               <div className="flex items-center gap-2 my-3">
                 <div className="flex-1 text-center">
                   <img src={activeChallenge.schoolA.logo} alt={activeChallenge.schoolA.name}
@@ -146,6 +160,117 @@ export const RightSidebar: React.FC = () => {
           </div>
         )}
 
+        {/* People You May Know (Cross-Campus Discovery) */}
+        <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <p className="font-bold text-xs uppercase tracking-wider text-neutral-800">
+              People You May Know
+            </p>
+            <span className="text-[10px] text-neutral-400">Cross-Campus</span>
+          </div>
+
+          {candidateUsers.length > 0 ? (
+            <div className="space-y-3">
+              {candidateUsers.slice(0, 3).map((user) => {
+                const isConnected = connectedUserIds.includes(user.id);
+                const isPendingSent = sentConnectionRequestUserIds.includes(user.id);
+                const incomingReq = incomingConnectionRequests.find(
+                  (r) => r.fromUserId === user.id
+                );
+
+                return (
+                  <div key={user.id} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        onClick={() =>
+                          openAvatarPreview({
+                            name: user.name,
+                            username: user.username,
+                            avatar: user.avatar,
+                            school: user.schoolName,
+                            userId: user.id
+                          })
+                        }
+                        title="Tap to open profile picture"
+                        className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500"
+                      />
+                      <div className="min-w-0">
+                        <p
+                          onClick={() => viewProfile(user.id)}
+                          title="View profile"
+                          className="text-xs font-bold text-neutral-900 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                        >
+                          {user.name}
+                        </p>
+                        <p className="text-[10px] text-blue-600 truncate">{user.schoolName}</p>
+                        <p className="text-[10px] text-neutral-400 truncate">
+                          {(user.creatorTalents || []).slice(0, 2).join(' • ')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {isConnected ? (
+                      <span
+                        className="p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
+                        title="Connected Friends"
+                      >
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span className="text-[10px]">Connected</span>
+                      </span>
+                    ) : incomingReq ? (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          id={`accept-conn-${user.id}-btn`}
+                          onClick={() => acceptConnectionRequest(incomingReq.id)}
+                          className="p-1.5 px-2 rounded-lg text-xs font-semibold flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs"
+                          title="Accept Connection Request"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span className="text-[10px]">Accept</span>
+                        </button>
+                        <button
+                          id={`decline-conn-${user.id}-btn`}
+                          onClick={() => declineConnectionRequest(incomingReq.id)}
+                          className="p-1.5 px-1.5 rounded-lg text-xs font-semibold flex items-center text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800 transition-all"
+                          title="Decline"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : isPendingSent ? (
+                      <button
+                        id={`cancel-conn-${user.id}-btn`}
+                        onClick={() => cancelConnectionRequest(user.id)}
+                        className="p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 shrink-0 transition-all"
+                        title="Click to cancel pending connection request"
+                      >
+                        <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+                        <span className="text-[10px]">Pending</span>
+                      </button>
+                    ) : (
+                      <button
+                        id={`connect-user-${user.id}-btn`}
+                        onClick={() => requestConnection(user.id)}
+                        className="p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700"
+                        title="Send Connection Request"
+                      >
+                        <UserPlus className="w-3 h-3" />
+                        <span className="text-[10px]">Connect</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-500 text-center py-2">
+              New students joining Campus Connect will appear here.
+            </p>
+          )}
+        </div>
+
         {/* Trending Topics & Hashtags */}
         <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
@@ -176,69 +301,6 @@ export const RightSidebar: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* People You May Know (Cross-Campus Discovery) */}
-        <div className="bg-white rounded-2xl border border-neutral-200/80 p-4 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <p className="font-bold text-xs uppercase tracking-wider text-neutral-800">
-              People You May Know
-            </p>
-            <span className="text-[10px] text-neutral-400">Cross-Campus</span>
-          </div>
-
-          {candidateUsers.length > 0 ? (
-            <div className="space-y-3">
-              {candidateUsers.slice(0, 3).map((user) => {
-                const isConnected = connectedUserIds.includes(user.id);
-                return (
-                  <div key={user.id} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <img
-                        src={user.avatar}
-                        alt={user.name}
-                        className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-neutral-900 truncate">{user.name}</p>
-                        <p className="text-[10px] text-blue-600 truncate">{user.schoolName}</p>
-                        <p className="text-[10px] text-neutral-400 truncate">
-                          {(user.creatorTalents || []).slice(0, 2).join(' • ')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      id={`connect-user-${user.id}-btn`}
-                      onClick={() => requestConnection(user.id)}
-                      className={`p-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all shrink-0 ${
-                        isConnected
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-neutral-100 hover:bg-blue-600 hover:text-white text-neutral-700'
-                      }`}
-                      title={isConnected ? 'Connected' : 'Send Connection Request'}
-                    >
-                      {isConnected ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-600" />
-                          <span className="text-[10px]">Connected</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-3 h-3" />
-                          <span className="text-[10px]">Connect</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-neutral-500 text-center py-2">
-              New students joining Campus Connect will appear here.
-            </p>
-          )}
         </div>
 
         {/* Footer Meta */}

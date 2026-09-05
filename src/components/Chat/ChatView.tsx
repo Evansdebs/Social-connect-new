@@ -7,8 +7,19 @@ import {
 
 export const ChatView: React.FC = () => {
   const {
-    conversations, activeConversationId, setActiveConversationId, sendMessage, currentUser,
-    clubChannels, activeChannelId, setActiveChannelId, sendGroupMessage, toggleJoinChannel
+    conversations,
+    activeConversationId,
+    setActiveConversationId,
+    sendMessage,
+    currentUser,
+    users,
+    viewProfile,
+    openAvatarPreview,
+    clubChannels,
+    activeChannelId,
+    setActiveChannelId,
+    sendGroupMessage,
+    toggleJoinChannel
   } = useApp();
 
   const [messageInput, setMessageInput] = useState('');
@@ -119,8 +130,25 @@ export const ChatView: React.FC = () => {
               <div key={conv.id} onClick={() => handleSelectConv(conv.id)}
                 className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors ${isActive ? 'bg-blue-50/70' : 'hover:bg-neutral-50'}`}>
                 <div className="relative shrink-0">
-                  <img src={conv.participant.avatar} alt={conv.participant.name} className="w-10 h-10 rounded-full object-cover border border-neutral-200" />
-                  {conv.participant.isOnline && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />}
+                  <img
+                    src={conv.participant.avatar}
+                    alt={conv.participant.name}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openAvatarPreview({
+                        name: conv.participant.name,
+                        username: conv.participant.username,
+                        avatar: conv.participant.avatar,
+                        school: conv.participant.school,
+                        userId: conv.participant.id
+                      });
+                    }}
+                    title="Tap to open profile picture"
+                    className="w-10 h-10 rounded-full object-cover border border-neutral-200 cursor-pointer hover:ring-2 hover:ring-blue-400"
+                  />
+                  {conv.participant.isOnline && (
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
@@ -189,12 +217,40 @@ export const ChatView: React.FC = () => {
               {activeConv && (
                 <>
                   <div className="relative">
-                    <img src={activeConv.participant.avatar} alt={activeConv.participant.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-neutral-200" />
-                    {activeConv.participant.isOnline && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />}
+                    <img
+                      src={activeConv.participant.avatar}
+                      alt={activeConv.participant.name}
+                      onClick={() =>
+                        openAvatarPreview({
+                          name: activeConv.participant.name,
+                          username: activeConv.participant.username,
+                          avatar: activeConv.participant.avatar,
+                          school: activeConv.participant.school,
+                          userId: activeConv.participant.id
+                        })
+                      }
+                      title="Tap to open profile picture"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-neutral-200 cursor-pointer hover:ring-2 hover:ring-blue-400"
+                    />
+                    {activeConv.participant.isOnline && (
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />
+                    )}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">{activeConv.participant.name}</h3>
-                    <p className="text-[11px] sm:text-xs text-blue-600 font-medium truncate">?? {activeConv.participant.school}</p>
+                    <h3
+                      onClick={() => viewProfile(activeConv.participant.id)}
+                      title="View user profile"
+                      className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate cursor-pointer hover:text-blue-600 hover:underline"
+                    >
+                      {activeConv.participant.name}
+                    </h3>
+                    <p
+                      onClick={() => viewProfile(activeConv.participant.id)}
+                      title="View user profile"
+                      className="text-[11px] sm:text-xs text-blue-600 font-medium truncate cursor-pointer hover:underline"
+                    >
+                      🏫 {activeConv.participant.school} • @{activeConv.participant.username}
+                    </p>
                   </div>
                 </>
               )}
@@ -209,7 +265,7 @@ export const ChatView: React.FC = () => {
                     <h3 className="font-extrabold text-xs sm:text-sm text-neutral-900 truncate">{activeChannel.clubName}</h3>
                     <p className="text-[11px] sm:text-xs text-purple-600 font-medium truncate">
                       <Users className="w-3 h-3 inline mr-0.5" />
-                      {activeChannel.membersCount} members � {activeChannel.clubCategory}
+                      {activeChannel.membersCount} members • {activeChannel.clubCategory}
                     </p>
                   </div>
                 </>

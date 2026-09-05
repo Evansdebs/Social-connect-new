@@ -26,6 +26,7 @@ import { EditProfileModal } from './components/Modals/EditProfileModal';
 import { SchoolAdminModal } from './components/Admin/SchoolAdminModal';
 import { PlatformAdminModal } from './components/Admin/PlatformAdminModal';
 import { AuthModal } from './components/Modals/AuthModal';
+import { AvatarPreviewModal } from './components/Modals/AvatarPreviewModal';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isAuthChecking, activeTab, activeModal, toast } = useApp();
@@ -134,6 +135,7 @@ const AppContent: React.FC = () => {
       {activeModal === 'school_admin' && <SchoolAdminModal />}
       {(activeModal === 'platform_admin' || activeModal === 'super_admin') && <PlatformAdminModal />}
       {activeModal === 'auth' && <AuthModal />}
+      {activeModal === 'view_avatar' && <AvatarPreviewModal />}
 
       {/* Toast Notifications System */}
       {toast && (

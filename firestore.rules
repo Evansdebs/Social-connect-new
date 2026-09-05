@@ -81,6 +81,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /connectionRequests/{reqId} {
+      allow read, write: if true;
+    }
+
     match /reports/{reportId} {
       allow read, write: if true;
     }
@@ -88,6 +92,10 @@ service cloud.firestore {
     match /schoolStaff/{staffId} {
       allow read: if true;
       allow write: if true;
+    }
+
+    match /schoolRequests/{reqId} {
+      allow read, write: if true;
     }
   }
 }
