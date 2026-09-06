@@ -25,7 +25,7 @@ export const CreateContentModal: React.FC = () => {
     createPost,
     createReel,
     createStory,
-    events,
+    createEvent,
     showToast
   } = useApp();
 
@@ -88,7 +88,7 @@ export const CreateContentModal: React.FC = () => {
   const [eventDate, setEventDate] = useState('NOV 14, 2026');
   const [eventTime, setEventTime] = useState('10:00 AM - 02:00 PM');
   const [eventLocation, setEventLocation] = useState('School Main Field / Hall');
-  const [eventCategory, setEventCategory] = useState<'Sports' | 'Academics' | 'Arts'>('Sports');
+  const [eventCategory, setEventCategory] = useState<'Sports' | 'Academics' | 'Arts' | 'Social' | 'Competition'>('Sports');
 
   // AI Assistant generator
   const handleGenerateAiCaption = async () => {
@@ -186,6 +186,24 @@ export const CreateContentModal: React.FC = () => {
         tags: ['CampusPoll', 'StudentVoice'],
         schoolId: currentUser.schoolId
       });
+    } else if (creationType === 'event') {
+      if (!eventTitle.trim()) {
+        showToast('Please enter an event title', 'error');
+        return;
+      }
+      createEvent({
+        title: eventTitle.trim(),
+        description: caption.trim() || `Join us for ${eventTitle.trim()} at ${currentUser.schoolName}!`,
+        date: eventDate.trim() || 'TBA',
+        time: eventTime.trim() || 'TBA',
+        location: eventLocation.trim() || `${currentUser.schoolName} Campus`,
+        schoolId: currentUser.schoolId || 'all',
+        schoolName: currentUser.schoolName || 'Campus Event',
+        schoolLogo: currentUser.avatar || 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=120&auto=format&fit=crop&q=80',
+        category: eventCategory,
+        coverImage: mediaUrl.trim() || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80',
+        eventCode: `EVT-${Math.floor(1000 + Math.random() * 9000)}`
+      });
     }
 
     closeModal();
@@ -211,7 +229,8 @@ export const CreateContentModal: React.FC = () => {
             { id: 'post', label: 'Post', icon: FileText },
             { id: 'reel', label: 'Reel', icon: Film },
             { id: 'story', label: 'Story', icon: ImageIcon },
-            { id: 'poll', label: 'Poll', icon: BarChart2 }
+            { id: 'poll', label: 'Poll', icon: BarChart2 },
+            { id: 'event', label: 'Event', icon: Calendar }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = creationType === tab.id;
@@ -457,6 +476,75 @@ export const CreateContentModal: React.FC = () => {
                     <span>Add Another Option</span>
                   </button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Event-Specific Inputs */}
+          {creationType === 'event' && (
+            <div className="space-y-3 p-3.5 bg-blue-50/50 rounded-2xl border border-blue-100/70">
+              <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                <span>Event Information</span>
+              </h4>
+              <div>
+                <label className="text-xs font-bold text-neutral-700 block mb-1">Event Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  placeholder="e.g. Annual Inter-School Tech Exhibition 2026"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-blue-500 bg-white"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Date</label>
+                  <input
+                    type="text"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    placeholder="e.g. OCT 28, 2026"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-blue-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Time</label>
+                  <input
+                    type="text"
+                    value={eventTime}
+                    onChange={(e) => setEventTime(e.target.value)}
+                    placeholder="e.g. 10:00 AM - 02:00 PM"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-blue-500 bg-white"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Venue / Location</label>
+                  <input
+                    type="text"
+                    value={eventLocation}
+                    onChange={(e) => setEventLocation(e.target.value)}
+                    placeholder="e.g. School Great Hall"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-blue-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-neutral-700 block mb-1">Category</label>
+                  <select
+                    value={eventCategory}
+                    onChange={(e) => setEventCategory(e.target.value as any)}
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-blue-500 bg-white"
+                  >
+                    <option value="Sports">Sports</option>
+                    <option value="Academics">Academics</option>
+                    <option value="Arts">Arts</option>
+                    <option value="Social">Social</option>
+                    <option value="Competition">Competition</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}

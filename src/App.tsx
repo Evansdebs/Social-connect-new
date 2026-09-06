@@ -36,7 +36,7 @@ const AppContent: React.FC = () => {
   if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-xl shadow-blue-500/25 mb-4 animate-pulse">
+        <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl mb-4 animate-pulse">
           <GraduationCap className="w-8 h-8 text-white" />
         </div>
         <p className="font-black text-lg tracking-tight text-white">Campus Connect</p>
@@ -94,14 +94,14 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Main Responsive Grid Layout */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 lg:px-6 pt-3 sm:pt-4 pb-24 md:pb-6 flex gap-4 lg:gap-6">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 lg:px-6 pt-3 sm:pt-4 pb-24 md:pb-6 flex gap-4 lg:gap-6 overflow-x-hidden min-w-0">
         {/* Left Primary Navigation Sidebar (Desktop) */}
         <div className="hidden md:block">
           <Sidebar />
         </div>
 
         {/* Center Dynamic Content View */}
-        <main className="flex-1 min-w-0 max-w-full">
+        <main className="flex-1 min-w-0 max-w-full overflow-x-hidden">
           {activeTab === 'home' && <Feed />}
           {activeTab === 'reels' && <ReelsViewer />}
           {activeTab === 'discover' && <DiscoverView />}

@@ -69,9 +69,7 @@ export const RightSidebar: React.FC = () => {
       <aside className="w-80 shrink-0 hidden xl:flex flex-col gap-4 py-4 select-none">
         {/* Inter-School Arena Live Spotlight */}
         {activeChallenge && (
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 p-4 shadow-lg overflow-hidden relative">
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
-
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-xs overflow-hidden relative">
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5">
@@ -125,9 +123,9 @@ export const RightSidebar: React.FC = () => {
                 const pctB = 100 - pctA;
                 return (
                   <div className="mb-3">
-                    <div className="h-2 w-full rounded-full overflow-hidden flex">
-                      <div style={{ width: `${pctA}%` }} className="bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-500" />
-                      <div style={{ width: `${pctB}%` }} className="bg-gradient-to-l from-purple-600 to-fuchsia-500 transition-all duration-500" />
+                    <div className="h-2 w-full rounded-full overflow-hidden flex bg-slate-800">
+                      <div style={{ width: `${pctA}%` }} className="bg-blue-600 transition-all duration-500" />
+                      <div style={{ width: `${pctB}%` }} className="bg-purple-600 transition-all duration-500" />
                     </div>
                     <div className="flex justify-between text-[9px] font-bold mt-0.5">
                       <span className="text-blue-400">{pctA}%</span>
@@ -153,7 +151,7 @@ export const RightSidebar: React.FC = () => {
               </div>
               <button id="enter-arena-btn"
                 onClick={() => setArenaChallenge(activeChallenge)}
-                className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black hover:brightness-110 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5">
+                className="w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer">
                 <Trophy className="w-3.5 h-3.5" /> Enter Full Arena
               </button>
             </div>

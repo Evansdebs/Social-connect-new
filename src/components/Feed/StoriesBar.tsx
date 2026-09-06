@@ -71,7 +71,7 @@ export const StoriesBar: React.FC = () => {
                 <div
                   className={`w-14 h-14 rounded-full p-0.5 transition-transform group-hover:scale-105 ${
                     hasUnviewed
-                      ? 'bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600 p-[2.5px]'
+                      ? 'border-2 border-blue-600 ring-2 ring-blue-600/30'
                       : 'border-2 border-neutral-200'
                   }`}
                 >
@@ -169,9 +169,7 @@ export const StoriesBar: React.FC = () => {
                 />
               ) : (
                 <div
-                  className={`w-full h-full flex items-center justify-center p-6 text-center text-lg font-bold bg-gradient-to-br ${
-                    activeStory.bgColor || 'from-indigo-600 to-purple-800'
-                  }`}
+                  className="w-full h-full flex items-center justify-center p-6 text-center text-lg font-bold bg-slate-900 text-white"
                 >
                   <p className="leading-relaxed drop-shadow-md">{activeStory.caption}</p>
                 </div>

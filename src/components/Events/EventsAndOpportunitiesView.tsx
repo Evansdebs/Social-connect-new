@@ -21,12 +21,15 @@ import {
   ShieldCheck,
   Ticket,
   CalendarPlus,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 
 export const EventsAndOpportunitiesView: React.FC = () => {
   const {
     events,
+    createEvent,
+    deleteEvent,
     toggleRsvpEvent,
     checkInEvent,
     currentUser,
@@ -102,7 +105,7 @@ export const EventsAndOpportunitiesView: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-sky-800 via-blue-800 to-indigo-900 rounded-3xl p-6 text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-800">
         <div>
           <div className="flex items-center gap-2 mb-1.5 text-sky-200 text-xs font-bold uppercase tracking-wider">
             <Calendar className="w-4 h-4 text-sky-300" />
@@ -124,11 +127,11 @@ export const EventsAndOpportunitiesView: React.FC = () => {
       </div>
 
       {/* Segment Switcher */}
-      <div className="flex items-center justify-between gap-2 border-b border-neutral-200 pb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-neutral-200 pb-3">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
           <button
             onClick={() => setActiveSection('events')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition-all text-center ${
               activeSection === 'events'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -138,7 +141,7 @@ export const EventsAndOpportunitiesView: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveSection('opportunities')}
-            className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition-all text-center ${
               activeSection === 'opportunities'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -149,16 +152,16 @@ export const EventsAndOpportunitiesView: React.FC = () => {
         </div>
 
         {/* Filter Pills */}
-        <div className="hidden sm:flex items-center gap-1.5 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {activeSection === 'events' ? (
             ['All', 'Sports', 'Academics', 'Arts', 'Competition'].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setEventCategoryFilter(cat)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                   eventCategoryFilter === cat
                     ? 'bg-neutral-900 text-white dark:bg-blue-600'
-                    : 'text-neutral-500 hover:bg-neutral-100'
+                    : 'bg-white sm:bg-transparent border sm:border-0 border-neutral-200 text-neutral-600 hover:bg-neutral-100'
                 }`}
               >
                 {cat}
@@ -169,10 +172,10 @@ export const EventsAndOpportunitiesView: React.FC = () => {
               <button
                 key={t}
                 onClick={() => setOppTypeFilter(t)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                   oppTypeFilter === t
                     ? 'bg-neutral-900 text-white dark:bg-blue-600'
-                    : 'text-neutral-500 hover:bg-neutral-100'
+                    : 'bg-white sm:bg-transparent border sm:border-0 border-neutral-200 text-neutral-600 hover:bg-neutral-100'
                 }`}
               >
                 {t}
@@ -217,6 +220,20 @@ export const EventsAndOpportunitiesView: React.FC = () => {
 
                   {/* Top Right Quick Actions */}
                   <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    {(currentUser.role === 'super_admin' || currentUser.role === 'school_admin') && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to remove "${ev.title}"?`)) {
+                            deleteEvent(ev.id);
+                          }
+                        }}
+                        className="p-2 bg-rose-600/80 hover:bg-rose-600 backdrop-blur-md rounded-full text-white transition-all text-xs"
+                        title="Delete Event (Admin)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => copyEventLink(ev)}
                       className="p-2 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full text-white transition-all text-xs"
@@ -442,7 +459,7 @@ export const EventsAndOpportunitiesView: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-neutral-200 animate-in zoom-in-95 duration-150">
             {/* Ticket Header */}
-            <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-700 p-6 text-white relative">
+            <div className="bg-blue-700 p-6 text-white relative">
               <button
                 onClick={() => setSelectedPassEvent(null)}
                 className="absolute top-4 right-4 p-1.5 bg-black/20 hover:bg-black/40 rounded-full text-white transition-colors"
@@ -459,7 +476,7 @@ export const EventsAndOpportunitiesView: React.FC = () => {
               </div>
 
               <h2 className="text-xl font-black leading-snug">{selectedPassEvent.title}</h2>
-              <p className="text-xs text-sky-100 mt-1 flex items-center gap-1">
+              <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5" />
                 <span>{selectedPassEvent.location}</span>
               </p>
@@ -499,7 +516,7 @@ export const EventsAndOpportunitiesView: React.FC = () => {
               </div>
 
               {/* QR Code Graphic & Verification Stamp */}
-              <div className="flex flex-col items-center justify-center p-6 bg-gradient-to-b from-neutral-50 to-neutral-100 rounded-2xl border-2 border-dashed border-neutral-300 relative">
+              <div className="flex flex-col items-center justify-center p-6 bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-300 relative">
                 {/* SVG QR Code Simulation */}
                 <div className="w-36 h-36 bg-white p-2 rounded-xl shadow-inner flex items-center justify-center border border-neutral-200">
                   <QrCode className="w-32 h-32 text-neutral-800" />

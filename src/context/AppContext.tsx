@@ -77,7 +77,13 @@ import {
   subscribeToMarketplace,
   saveMarketItemToFirebase,
   updateMarketItemInFirebase,
-  deleteMarketItemFromFirebase
+  deleteMarketItemFromFirebase,
+  saveEventToFirebase,
+  deleteEventFromFirebase,
+  saveChallengeToFirebase,
+  subscribeToOpportunities,
+  saveOpportunityToFirebase,
+  updateOpportunityInFirebase
 } from '../lib/firestoreService';
 import {
   DEFAULT_GUEST_USER,
@@ -185,6 +191,7 @@ interface AppContextType {
   likeReel: (reelId: string) => void;
   deleteReel: (reelId: string) => void;
   clubs: GroupClub[];
+  createClub: (club: Omit<GroupClub, 'id' | 'membersCount' | 'isJoined'>) => void;
   toggleJoinClub: (clubId: string) => void;
   deleteClub: (clubId: string) => void;
   challenges: Challenge[];
@@ -193,8 +200,10 @@ interface AppContextType {
   addChallengeHype: (challengeId: string, text: string) => void;
   createChallenge: (challenge: Challenge) => void;
   events: CampusEvent[];
+  createEvent: (event: Omit<CampusEvent, 'id' | 'goingCount' | 'interestedCount' | 'attendees' | 'userStatus'>) => void;
   toggleRsvpEvent: (eventId: string, status: 'interested' | 'going' | null) => void;
   checkInEvent: (eventId: string) => void;
+  deleteEvent: (eventId: string) => void;
   opportunities: Opportunity[];
   toggleSaveOpportunity: (oppId: string) => void;
   conversations: Conversation[];
@@ -311,10 +320,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [reports, setReports] = useState<ReportItem[]>([]);
-  const [marketplaceItems, setMarketplaceItems] = useState<MarketItem[]>(() => {
-    const saved = localStorage.getItem('cc_marketplace_items');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [marketplaceItems, setMarketplaceItems] = useState<MarketItem[]>([]);
 
   // Fix #5: Only persisted user-preference state stays in localStorage
   const [savedPostIds, setSavedPostIds] = useState<string[]>(() => {
@@ -485,9 +491,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('cc_selected_school_id', selectedSchoolId || '');
   }, [selectedSchoolId]);
 
-  useEffect(() => {
-    localStorage.setItem('cc_marketplace_items', JSON.stringify(marketplaceItems));
-  }, [marketplaceItems]);
 
 
   // Firestore & Firebase Auth real-time sync
@@ -603,9 +606,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // Real-time schools stream
+    // Seed official school directory to Firestore on first boot if empty
+    let schoolsSeeded = false;
     const unsubSchools = subscribeToSchools((liveSchools) => {
       if (liveSchools.length > 0) {
         setSchools(liveSchools);
+      } else if (!schoolsSeeded) {
+        // First run: seed the official school directory to Firestore
+        schoolsSeeded = true;
+        INITIAL_DEMO_SCHOOLS.forEach((school) => {
+          saveSchoolToFirebase(school).catch(() => {});
+        });
       }
     });
 
@@ -617,9 +628,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // Real-time events stream
+    // Seed official campus events to Firestore on first boot if empty
+    let eventsSeeded = false;
     const unsubEvents = subscribeToEvents((liveEvents) => {
       if (liveEvents.length > 0) {
         setEvents(liveEvents);
+      } else if (!eventsSeeded) {
+        eventsSeeded = true;
+        INITIAL_DEMO_EVENTS.forEach((event) => {
+          saveEventToFirebase(event).catch(() => {});
+        });
       }
     });
 
@@ -635,20 +653,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSchoolStaff(liveStaff);
     });
 
-    // Real-time notifications stream
-    const unsubNotifs = subscribeToNotifications((liveNotifs) => {
-      if (liveNotifs.length > 0) {
-        setNotifications((prev) => {
-          const merged = [...prev];
-          liveNotifs.forEach((n) => {
-            const idx = merged.findIndex((m) => m.id === n.id);
-            if (idx >= 0) merged[idx] = n;
-            else merged.push(n);
-          });
-          return merged;
-        });
-      }
-    });
+    // Notification subscription is handled in a separate per-user useEffect below
 
     // Real-time connection requests stream
     const unsubReqs = subscribeToConnectionRequests((liveReqs) => {
@@ -671,16 +676,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     // Real-time challenges stream
+    // Seed official campus challenges to Firestore on first boot if empty
+    let challengesSeeded = false;
     const unsubChallenges = subscribeToChallenges((liveChallenges) => {
       if (liveChallenges.length > 0) {
         setChallenges(liveChallenges);
+      } else if (!challengesSeeded) {
+        challengesSeeded = true;
+        INITIAL_DEMO_CHALLENGES.forEach((challenge) => {
+          saveChallengeToFirebase(challenge).catch(() => {});
+        });
       }
     });
 
-    // Real-time marketplace stream
+    // Real-time marketplace stream — Firebase is the authoritative source
     const unsubMarketplace = subscribeToMarketplace((liveItems) => {
-      if (liveItems.length > 0) {
-        setMarketplaceItems(liveItems);
+      setMarketplaceItems(liveItems);
+    });
+
+    // Real-time opportunities stream
+    // Seed official campus opportunities to Firestore on first boot if empty
+    let opportunitiesSeeded = false;
+    const unsubOpportunities = subscribeToOpportunities((liveOpps) => {
+      if (liveOpps.length > 0) {
+        setOpportunities(liveOpps);
+      } else if (!opportunitiesSeeded) {
+        opportunitiesSeeded = true;
+        INITIAL_DEMO_OPPORTUNITIES.forEach((opp) => {
+          saveOpportunityToFirebase(opp).catch(() => {});
+        });
       }
     });
 
@@ -696,13 +720,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubEvents();
       unsubUsers();
       unsubStaff();
-      unsubNotifs();
       unsubReqs();
       unsubSchoolReqs();
       unsubChallenges();
       unsubMarketplace();
+      unsubOpportunities();
     };
   }, []);
+
+  // ---------------------------------------------------------------
+  // Per-user notification subscription — re-runs whenever the
+  // authenticated user changes so each user sees only their own
+  // notifications (enforced at the Firestore query layer).
+  // ---------------------------------------------------------------
+  useEffect(() => {
+    // Clear stale notifications from previous session immediately
+    setNotifications([]);
+    if (!currentUserId || currentUserId === 'guest') return;
+
+    const unsubNotifs = subscribeToNotifications(currentUserId, (liveNotifs) => {
+      // Replace state with the full server-filtered list (no merge needed —
+      // the query already scopes to this user's notifications only)
+      setNotifications(liveNotifs);
+    });
+
+    return () => {
+      unsubNotifs();
+    };
+  }, [currentUserId]);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
     setToast({ message, type });
@@ -1323,6 +1368,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Reel removed.', 'info');
   };
 
+  const createClub = (clubData: Omit<GroupClub, 'id' | 'membersCount' | 'isJoined'>) => {
+    const newClub: GroupClub = {
+      ...clubData,
+      id: `club-${Date.now()}`,
+      membersCount: 1,
+      isJoined: true
+    };
+    setClubs((prev) => [newClub, ...prev]);
+    saveClubToFirebase(newClub);
+
+    const newChannel: ClubChannel = {
+      id: `channel-${newClub.id}`,
+      clubId: newClub.id,
+      clubName: newClub.name,
+      clubCategory: newClub.category,
+      coverImage: newClub.coverImage,
+      description: newClub.description,
+      membersCount: 1,
+      isJoined: true,
+      lastMessage: 'Welcome to the club group chat!',
+      lastMessageTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      unreadCount: 0,
+      messages: [
+        {
+          id: `gm-${Date.now()}`,
+          channelId: `channel-${newClub.id}`,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderAvatar: currentUser.avatar,
+          senderSchool: currentUser.schoolName,
+          text: `Welcome to ${newClub.name}! 🚀`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]
+    };
+    setClubChannels((prev) => [newChannel, ...prev]);
+    showToast(`Club "${newClub.name}" created successfully! 🎉`, 'success');
+  };
+
   const toggleJoinClub = (clubId: string) => {
     setClubs((prev) =>
       prev.map((c) => {
@@ -1453,6 +1537,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const createEvent = (eventData: Omit<CampusEvent, 'id' | 'goingCount' | 'interestedCount' | 'attendees' | 'userStatus'>) => {
+    const newEvent: CampusEvent = {
+      ...eventData,
+      id: `ev-${Date.now()}`,
+      goingCount: 1,
+      interestedCount: 0,
+      userStatus: 'going',
+      checkedInUserIds: [],
+      attendees: [
+        {
+          id: currentUser.id,
+          name: currentUser.name,
+          username: currentUser.username,
+          avatar: currentUser.avatar,
+          schoolName: currentUser.schoolName || 'Campus Member',
+          checkedIn: false,
+          ticketCode: `${eventData.eventCode || 'PASS'}-${Math.floor(1000 + Math.random() * 9000)}`
+        }
+      ]
+    };
+    setEvents((prev) => [newEvent, ...prev]);
+    saveEventToFirebase(newEvent);
+    showToast('Campus event created successfully! 🎪', 'success');
+  };
+
+  const deleteEvent = (eventId: string) => {
+    setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
+    deleteEventFromFirebase(eventId);
+    showToast('Event removed', 'info');
+  };
+
   const toggleRsvpEvent = (eventId: string, status: 'interested' | 'going' | null) => {
     setEvents((prev) =>
       prev.map((ev) => {
@@ -1557,6 +1672,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (opp.id !== oppId) return opp;
         const isSaved = !opp.isSaved;
         showToast(isSaved ? 'Opportunity bookmarked!' : 'Removed from bookmarks', 'info');
+        updateOpportunityInFirebase(oppId, { isSaved }).catch(() => {});
         return { ...opp, isSaved };
       })
     );
@@ -1616,6 +1732,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markNotificationRead = (notifId: string) => {
+    // Persist read-state to Firestore so it survives a page reload
+    updateNotificationInFirebase(notifId, { isRead: true }).catch(() => {});
     setNotifications((prev) =>
       prev.map((n) => (n.id === notifId ? { ...n, isRead: true } : n))
     );
@@ -1813,16 +1931,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const notif: NotificationItem = {
       id: `notif-${Date.now()}`,
       type: 'connection_request',
+      // recipientId = the person receiving the connection request
+      recipientId: targetUserId,
       senderName: currentUser.name,
       senderAvatar: currentUser.avatar,
       content: 'sent you a connection request.',
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       isRead: false,
       requestId: newReq.id,
       senderId: currentUser.id,
       targetUserId: targetUserId
     };
-    setNotifications((prev) => [notif, ...prev]);
+    // Do NOT add to local state — the per-user subscription will surface it
+    // only for the recipient when they are logged in.
     saveNotificationToFirebase(notif);
 
     showToast(
@@ -1886,10 +2007,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const confirmNotif: NotificationItem = {
         id: `notif-acc-${Date.now()}`,
         type: 'connection_request',
+        // recipientId = the person who originally sent the request (inform them it was accepted)
+        recipientId: partnerId,
         senderName: currentUser.name,
         senderAvatar: currentUser.avatar,
         content: 'accepted your connection request. You are now connected friends!',
-        timestamp: 'Just now',
+        timestamp: new Date().toISOString(),
         isRead: false,
         requestId: targetReq.id,
         senderId: currentUser.id,
@@ -2093,6 +2216,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         likeReel,
         deleteReel,
         clubs,
+        createClub,
         toggleJoinClub,
         deleteClub,
         challenges,
@@ -2101,6 +2225,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addChallengeHype,
         createChallenge,
         events,
+        createEvent,
+        deleteEvent,
         toggleRsvpEvent,
         checkInEvent,
         opportunities,

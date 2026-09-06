@@ -144,22 +144,21 @@ export const MarketplaceView: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 rounded-3xl p-6 text-white relative overflow-hidden shadow-sm">
-        <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 text-white relative overflow-hidden shadow-sm">
         <div className="relative z-10">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-xs">
-                <ShoppingBag className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-amber-500/20 border border-amber-500/30 rounded-2xl flex items-center justify-center">
+                <ShoppingBag className="w-6 h-6 text-amber-400" />
               </div>
               <div>
-                <h1 className="font-black text-xl tracking-tight">Campus Marketplace</h1>
-                <p className="text-white/80 text-xs">Buy, sell & swap verified textbooks, notes, gear & essentials</p>
+                <h1 className="font-black text-xl tracking-tight text-white">Campus Marketplace</h1>
+                <p className="text-slate-400 text-xs">Buy, sell & swap verified textbooks, notes, gear & essentials</p>
               </div>
             </div>
             <button
               onClick={() => setShowSell(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-orange-600 rounded-xl font-black text-xs hover:bg-orange-50 transition-all shadow-md cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl font-black text-xs hover:bg-amber-700 transition-all shadow-md cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>List an Item</span>
@@ -202,15 +201,15 @@ export const MarketplaceView: React.FC = () => {
       </div>
 
       {/* Category Filter Pills */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex flex-wrap items-center gap-2">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
               selectedCategory === cat
-                ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20'
-                : 'bg-white text-neutral-600 border-neutral-200 hover:border-orange-300'
+                ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+                : 'bg-white text-neutral-600 border-neutral-200 hover:border-amber-300'
             }`}
           >
             {cat}
@@ -407,7 +406,7 @@ export const MarketplaceView: React.FC = () => {
                 </div>
               ) : (
                 <form onSubmit={handleContact} className="space-y-2">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       value={contactMsg}
                       onChange={(e) => setContactMsg(e.target.value)}
@@ -416,7 +415,7 @@ export const MarketplaceView: React.FC = () => {
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>Message Seller</span>
@@ -545,7 +544,7 @@ export const MarketplaceView: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full mt-2 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs uppercase tracking-wider rounded-xl hover:brightness-105 transition-all shadow-md shadow-orange-500/20 cursor-pointer"
+                  className="w-full mt-2 py-3 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
                 >
                   List Item on Marketplace
                 </button>

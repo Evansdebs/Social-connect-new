@@ -298,7 +298,7 @@ export const ProfileView: React.FC = () => {
               {targetUser.creatorTalents.map((talent, idx) => (
                 <span
                   key={idx}
-                  className="text-xs bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 text-purple-800 px-2.5 py-0.5 rounded-full font-bold shadow-2xs"
+                  className="text-xs bg-purple-50 border border-purple-200 text-purple-800 px-2.5 py-0.5 rounded-full font-bold shadow-2xs"
                 >
                   ★ {talent}
                 </span>
@@ -336,7 +336,7 @@ export const ProfileView: React.FC = () => {
         </div>
 
         {/* Profile Tabs Navigation */}
-        <div className="flex items-center border-t border-neutral-200 px-4 overflow-x-auto scrollbar-none bg-neutral-50/50">
+        <div className="flex flex-wrap sm:flex-nowrap items-center border-t border-neutral-200 p-1.5 sm:px-4 bg-neutral-50/50 gap-1 sm:gap-0">
           {[
             { id: 'posts', label: `Posts (${userPosts.length})`, icon: FileText },
             { id: 'media', label: `Media (${userMediaPosts.length})`, icon: ImageIcon },
@@ -346,7 +346,7 @@ export const ProfileView: React.FC = () => {
               ? [
                   {
                     id: 'connections',
-                    label: `Connected Friends (${connectedUserIds.length})`,
+                    label: `Friends (${connectedUserIds.length})`,
                     icon: UserCheck
                   },
                   { id: 'reposts', label: `Reposts (${userReposts.length})`, icon: Repeat },
@@ -363,10 +363,10 @@ export const ProfileView: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveProfileTab(tab.id as any)}
-                className={`py-3 px-4 text-xs font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                className={`py-2 px-3 sm:py-3 sm:px-4 text-xs font-bold rounded-xl sm:rounded-none sm:border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
                   isActive
-                    ? 'border-blue-600 text-blue-600 bg-white'
-                    : 'border-transparent text-neutral-500 hover:text-neutral-900'
+                    ? 'bg-blue-600 sm:bg-white text-white sm:text-blue-600 sm:border-blue-600 shadow-xs sm:shadow-none'
+                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 sm:hover:bg-transparent sm:border-transparent'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -606,7 +606,7 @@ export const ProfileView: React.FC = () => {
                 key={idx}
                 className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-xs flex items-center gap-3.5"
               >
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-sm shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white shadow-sm shrink-0">
                   <Award className="w-6 h-6" />
                 </div>
                 <div>

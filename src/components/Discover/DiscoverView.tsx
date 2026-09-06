@@ -93,7 +93,7 @@ export const DiscoverView: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Search Header Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-700 rounded-3xl p-6 text-white shadow-sm relative overflow-hidden">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xs relative overflow-hidden border border-slate-800">
         <div className="relative z-10 max-w-xl">
           <div className="flex items-center gap-2 mb-2 text-sky-200 text-xs font-bold uppercase tracking-wider">
             <Compass className="w-4 h-4 text-sky-300" />
@@ -118,12 +118,10 @@ export const DiscoverView: React.FC = () => {
             />
           </div>
         </div>
-
-        <div className="absolute right-0 bottom-0 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* Filter Category Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex flex-wrap items-center gap-2">
         {(
           [
             { id: 'all', label: 'All Results' },
@@ -137,7 +135,7 @@ export const DiscoverView: React.FC = () => {
           <button
             key={tab.id}
             onClick={() => setActiveFilter(tab.id)}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeFilter === tab.id
                 ? 'bg-neutral-900 text-white shadow-xs'
                 : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -238,7 +236,7 @@ export const DiscoverView: React.FC = () => {
               return (
                 <div
                   key={ch.id}
-                  className="p-4 rounded-xl border border-neutral-200 bg-gradient-to-b from-neutral-50 to-white"
+                  className="p-4 rounded-xl border border-neutral-200 bg-neutral-50 hover:bg-white transition-colors"
                 >
                   <div className="flex items-center justify-between text-xs text-neutral-500 mb-2">
                     <span className="font-bold uppercase tracking-wider text-blue-600 text-[10px] bg-blue-50 px-2 py-0.5 rounded">

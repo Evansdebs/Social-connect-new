@@ -112,7 +112,7 @@ export const SchoolProfileView: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* School Switcher Strip */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider shrink-0 mr-1">
           Select School:
         </span>
@@ -120,7 +120,7 @@ export const SchoolProfileView: React.FC = () => {
           <button
             key={s.id}
             onClick={() => setSelectedSchoolId(s.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               activeSchool?.id === s.id
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
@@ -133,7 +133,7 @@ export const SchoolProfileView: React.FC = () => {
 
         <button
           onClick={() => setShowRegisterModal(true)}
-          className="px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100"
+          className="px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Register School</span>
@@ -378,7 +378,7 @@ export const SchoolProfileView: React.FC = () => {
         </div>
 
         {/* School Tabs Navigation */}
-        <div className="flex items-center border-t border-neutral-200 px-4 overflow-x-auto scrollbar-none bg-neutral-50/50">
+        <div className="flex flex-wrap sm:flex-nowrap items-center border-t border-neutral-200 p-1.5 sm:px-4 bg-neutral-50/50 gap-1 sm:gap-0">
           {[
             { id: 'feed', label: `School Feed (${schoolPosts.length})` },
             { id: 'clubs', label: `Official Clubs (${schoolClubs.length})` },
@@ -389,10 +389,10 @@ export const SchoolProfileView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveSchoolTab(tab.id as any)}
-              className={`py-3 px-4 text-xs font-bold border-b-2 whitespace-nowrap transition-colors ${
+              className={`py-2 px-3 sm:py-3 sm:px-4 text-xs font-bold rounded-xl sm:rounded-none sm:border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
                 activeSchoolTab === tab.id
-                  ? 'border-blue-600 text-blue-600 bg-white'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-blue-600 sm:bg-white text-white sm:text-blue-600 sm:border-blue-600 shadow-xs sm:shadow-none'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 sm:hover:bg-transparent sm:border-transparent'
               }`}
             >
               {tab.label}

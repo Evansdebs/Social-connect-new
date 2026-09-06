@@ -50,7 +50,7 @@ export const Feed: React.FC = () => {
       <CreatePostCard />
 
       {/* Feed Scope Switcher Pills */}
-      <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-neutral-200/80 shadow-2xs overflow-x-auto scrollbar-none">
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-neutral-200/80 shadow-2xs">
         {[
           { id: 'global', label: 'Global Campus', icon: Globe },
           {
@@ -67,14 +67,14 @@ export const Feed: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setFeedFilter(tab.id as any)}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 ${
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:flex-1 ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
+              <Icon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{tab.label}</span>
             </button>
           );
         })}

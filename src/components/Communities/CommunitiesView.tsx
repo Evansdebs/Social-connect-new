@@ -1,11 +1,49 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Users, Plus, ShieldCheck, Check, Search, Sparkles, BookOpen } from 'lucide-react';
+import { Users, Plus, ShieldCheck, Check, Search, Sparkles, BookOpen, X, Trash2 } from 'lucide-react';
 
 export const CommunitiesView: React.FC = () => {
-  const { clubs, toggleJoinClub, openModal, currentUser } = useApp();
+  const { clubs, createClub, deleteClub, toggleJoinClub, currentUser, showToast } = useApp();
   const [filter, setFilter] = useState<'all' | 'official' | 'joined'>('all');
   const [search, setSearch] = useState('');
+
+  // Create Club Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newClubName, setNewClubName] = useState('');
+  const [newClubCategory, setNewClubCategory] = useState('STEM & Robotics');
+  const [newClubDescription, setNewClubDescription] = useState('');
+  const [newClubCover, setNewClubCover] = useState('https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80');
+  const [newClubRules, setNewClubRules] = useState('Be respectful, actively participate, and support your fellow members.');
+  const [newClubIsOfficial, setNewClubIsOfficial] = useState(false);
+
+  const handleCreateClubSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClubName.trim()) {
+      showToast('Please enter a club name', 'error');
+      return;
+    }
+
+    const rulesArray = newClubRules
+      .split(',')
+      .map((r) => r.trim())
+      .filter(Boolean);
+
+    createClub({
+      name: newClubName.trim(),
+      category: newClubCategory,
+      description: newClubDescription.trim() || `Official ${newClubName.trim()} group for passionate students.`,
+      coverImage: newClubCover.trim() || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
+      rules: rulesArray.length > 0 ? rulesArray : ['Respect all members', 'Stay active in discussions'],
+      isOfficialClub: (currentUser.role === 'school_admin' || currentUser.role === 'super_admin') ? newClubIsOfficial : false,
+      schoolId: currentUser.schoolId,
+      schoolName: currentUser.schoolName,
+      leadTeacherOrAdmin: currentUser.name
+    });
+
+    setNewClubName('');
+    setNewClubDescription('');
+    setShowCreateModal(false);
+  };
 
   const filteredClubs = clubs.filter((c) => {
     if (filter === 'official' && !c.isOfficialClub) return false;
@@ -24,7 +62,7 @@ export const CommunitiesView: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-indigo-800 via-purple-800 to-blue-800 rounded-3xl p-6 text-white shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-800">
         <div>
           <div className="flex items-center gap-2 mb-1.5 text-indigo-200 text-xs font-bold uppercase tracking-wider">
             <Users className="w-4 h-4 text-indigo-300" />
@@ -37,8 +75,8 @@ export const CommunitiesView: React.FC = () => {
         </div>
 
         <button
-          onClick={() => openModal('create_post')}
-          className="px-4 py-2.5 bg-white text-indigo-900 rounded-full text-xs font-extrabold shadow-md hover:bg-neutral-100 transition-colors flex items-center gap-1.5 shrink-0 self-start sm:self-center"
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2.5 bg-white text-indigo-900 rounded-full text-xs font-extrabold shadow-md hover:bg-neutral-100 transition-colors flex items-center gap-1.5 shrink-0 self-start sm:self-center cursor-pointer"
         >
           <Plus className="w-4 h-4 text-indigo-700" />
           <span>Start Club / Group</span>
@@ -47,7 +85,7 @@ export const CommunitiesView: React.FC = () => {
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="flex flex-wrap items-center gap-2">
           {[
             { id: 'all', label: `All Clubs (${clubs.length})` },
             { id: 'joined', label: 'My Joined Clubs' },
@@ -56,7 +94,7 @@ export const CommunitiesView: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id as any)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 filter === tab.id
                   ? 'bg-neutral-900 text-white shadow-xs'
                   : 'bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50'
@@ -67,14 +105,14 @@ export const CommunitiesView: React.FC = () => {
           ))}
         </div>
 
-        <div className="relative">
+        <div className="relative w-full sm:w-64">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search clubs & societies..."
-            className="pl-8 pr-3 py-1.5 bg-white border border-neutral-200 rounded-full text-xs text-neutral-900 placeholder-neutral-400 outline-none focus:border-indigo-500 w-full sm:w-60"
+            className="pl-8 pr-3 py-1.5 bg-white border border-neutral-200 rounded-full text-xs text-neutral-900 placeholder-neutral-400 outline-none focus:border-indigo-500 w-full"
           />
         </div>
       </div>
@@ -147,17 +185,32 @@ export const CommunitiesView: React.FC = () => {
                     )}
                   </div>
 
-                  <button
-                    id={`join-club-${club.id}`}
-                    onClick={() => toggleJoinClub(club.id)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                      club.isJoined
-                        ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                    }`}
-                  >
-                    {club.isJoined ? 'Joined ✓' : 'Join Club'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {(currentUser.role === 'super_admin' || currentUser.role === 'school_admin') && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete "${club.name}"?`)) {
+                            deleteClub(club.id);
+                          }
+                        }}
+                        className="p-1.5 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                        title="Delete Club (Admin)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      id={`join-club-${club.id}`}
+                      onClick={() => toggleJoinClub(club.id)}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        club.isJoined
+                          ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                          : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
+                      }`}
+                    >
+                      {club.isJoined ? 'Joined ✓' : 'Join Club'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -181,6 +234,115 @@ export const CommunitiesView: React.FC = () => {
           >
             Reset Filters
           </button>
+        </div>
+      )}
+
+      {/* Create Club Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 flex flex-col max-h-[90vh]">
+            <div className="p-4 px-6 border-b border-neutral-100 flex items-center justify-between bg-neutral-50">
+              <div className="flex items-center gap-2 text-indigo-700 font-extrabold text-sm">
+                <Users className="w-4 h-4" />
+                <span>Start a Campus Club or Society</span>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-1 rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateClubSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-neutral-700 block mb-1">Club / Society Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newClubName}
+                  onChange={(e) => setNewClubName(e.target.value)}
+                  placeholder="e.g., Robotics & AI Innovators Society"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-neutral-200 outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-neutral-700 block mb-1">Category</label>
+                  <select
+                    value={newClubCategory}
+                    onChange={(e) => setNewClubCategory(e.target.value)}
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-indigo-500 bg-white"
+                  >
+                    <option value="STEM & Robotics">STEM & Robotics</option>
+                    <option value="Debate & Oratory">Debate & Oratory</option>
+                    <option value="Sports & Athletics">Sports & Athletics</option>
+                    <option value="Arts, Drama & Music">Arts, Drama & Music</option>
+                    <option value="Coding & Tech">Coding & Tech</option>
+                    <option value="Climate & Volunteering">Climate & Volunteering</option>
+                    <option value="Academic & Quiz">Academic & Quiz</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-neutral-700 block mb-1">Cover Image URL</label>
+                  <input
+                    type="url"
+                    value={newClubCover}
+                    onChange={(e) => setNewClubCover(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-neutral-700 block mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={newClubDescription}
+                  onChange={(e) => setNewClubDescription(e.target.value)}
+                  placeholder="What is this club about? What activities do members participate in?"
+                  className="w-full text-xs px-3.5 py-2 rounded-xl border border-neutral-200 outline-none focus:border-indigo-500 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-neutral-700 block mb-1">Club Guidelines (Comma-separated)</label>
+                <input
+                  type="text"
+                  value={newClubRules}
+                  onChange={(e) => setNewClubRules(e.target.value)}
+                  placeholder="Active weekly meetings, respectful debate, project collaboration"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-neutral-200 outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {(currentUser.role === 'school_admin' || currentUser.role === 'super_admin') && (
+                <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-indigo-950 block text-xs">Official School Club</span>
+                    <span className="text-[10px] text-indigo-700">Display official verified school badge</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={newClubIsOfficial}
+                    onChange={(e) => setNewClubIsOfficial(e.target.checked)}
+                    className="rounded text-indigo-600"
+                  />
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-md shadow-indigo-500/20 cursor-pointer"
+                >
+                  Create & Launch Club
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -276,14 +276,10 @@ export const AdminDashboardView: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Top Super Admin Executive Header */}
-      <div className="bg-gradient-to-r from-neutral-950 via-slate-900 to-indigo-950 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-neutral-800 relative overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/3 w-60 h-60 bg-purple-600/10 rounded-full blur-2xl pointer-events-none" />
-
+      <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-slate-800 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-md shrink-0">
               <ShieldCheck className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -371,7 +367,7 @@ export const AdminDashboardView: React.FC = () => {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="bg-white rounded-2xl border border-neutral-200/80 p-1.5 shadow-xs flex items-center gap-1 overflow-x-auto">
+      <div className="bg-white rounded-2xl border border-neutral-200/80 p-1.5 shadow-xs flex flex-wrap items-center gap-1">
         {[
           { id: 'overview', label: 'Executive Overview', icon: BarChart3 },
           { id: 'users', label: `User Directory (${users.length})`, icon: Users },
@@ -593,7 +589,7 @@ export const AdminDashboardView: React.FC = () => {
             </div>
 
             {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+            <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
               {(
                 [
                   { id: 'all', label: 'All Users' },
@@ -619,8 +615,113 @@ export const AdminDashboardView: React.FC = () => {
             </div>
           </div>
 
-          {/* User Table */}
-          <div className="overflow-x-auto">
+          {/* Mobile User Cards View (sm:hidden) */}
+          <div className="sm:hidden space-y-3">
+            {filteredUsers.map((u) => {
+              const isSuspended = u.accountStatus === 'suspended';
+              const isCurrent = u.id === currentUser.id;
+
+              return (
+                <div key={u.id} className="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={u.avatar}
+                        alt={u.name}
+                        className="w-10 h-10 rounded-full object-cover border border-neutral-200 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-sm text-neutral-900 truncate">{u.name}</span>
+                          {u.isVerified && <BadgeCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                        </div>
+                        <span className="text-xs text-neutral-500 block truncate">
+                          @{u.username} • {u.schoolName || 'Platform General'}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-md shrink-0 ${
+                        isSuspended ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {isSuspended ? 'Suspended' : 'Active'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap text-[11px] pt-1 border-t border-neutral-200/60">
+                    <span className="text-neutral-500">Role:</span>
+                    <button
+                      onClick={() => {
+                        if (isCurrent) {
+                          showToast('You cannot alter your own admin status directly.', 'error');
+                          return;
+                        }
+                        updateUserRole(u.id, u.role === 'super_admin' ? 'user' : 'super_admin');
+                      }}
+                      className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md cursor-pointer ${
+                        u.role === 'super_admin'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-neutral-200 text-neutral-700'
+                      }`}
+                    >
+                      {u.role === 'super_admin' ? 'SUPER_ADMIN' : 'USER'}
+                    </button>
+
+                    <span className="text-neutral-500 ml-2">Type:</span>
+                    <span className="font-bold uppercase text-[10px] text-neutral-700">
+                      {u.userType || 'student'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200/60">
+                    <button
+                      onClick={() => toggleUserVerification(u.id)}
+                      className={`px-2.5 py-1 rounded-lg border text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
+                        u.isVerified
+                          ? 'bg-blue-50 border-blue-200 text-blue-700'
+                          : 'bg-white border-neutral-200 text-neutral-600'
+                      }`}
+                    >
+                      <BadgeCheck className="w-3.5 h-3.5" />
+                      <span>{u.isVerified ? 'Verified' : 'Verify'}</span>
+                    </button>
+
+                    {!isCurrent && (
+                      <button
+                        onClick={() => updateUserStatus(u.id, isSuspended ? 'active' : 'suspended')}
+                        className={`px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1 cursor-pointer ${
+                          isSuspended
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {isSuspended ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
+                        <span>{isSuspended ? 'Reactivate' : 'Suspend'}</span>
+                      </button>
+                    )}
+
+                    {!isCurrent && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Permanently delete account for ${u.name}?`)) {
+                            deleteUserAccount(u.id);
+                          }
+                        }}
+                        className="p-1.5 text-neutral-400 hover:text-rose-600 bg-white border border-neutral-200 rounded-lg cursor-pointer"
+                        title="Delete user account"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop User Table (hidden sm:block) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-neutral-200 text-neutral-500 font-bold uppercase text-[10px]">
@@ -1278,7 +1379,7 @@ export const AdminDashboardView: React.FC = () => {
               <button
                 type="submit"
                 disabled={!broadcastText.trim()}
-                className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-40 text-white font-bold rounded-xl flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 disabled:opacity-40 text-white font-bold rounded-xl flex items-center gap-2 shadow-md transition-all cursor-pointer"
               >
                 <span>Broadcast to Network</span>
                 <Send className="w-3.5 h-3.5" />

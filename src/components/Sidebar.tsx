@@ -141,8 +141,7 @@ export const Sidebar: React.FC<{ onCloseMobileMenu?: () => void }> = ({ onCloseM
 
       {/* "My School" Quick Card */}
       {activeSchool ? (
-        <div className="bg-gradient-to-br from-blue-900 to-indigo-950 text-white rounded-2xl p-4 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="bg-slate-900 text-white rounded-2xl p-4 shadow-xs relative overflow-hidden border border-slate-800">
           <div className="flex items-center gap-3 mb-2.5">
             <img
               src={activeSchool.logo}

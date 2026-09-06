@@ -325,6 +325,8 @@ export interface ConnectionRequest {
 export interface NotificationItem {
   id: string;
   type: 'like' | 'comment' | 'connection_request' | 'school_announcement' | 'repost' | 'challenge' | 'mention';
+  /** The UID of the user this notification is intended for. Used for server-side filtering. */
+  recipientId: string;
   senderName: string;
   senderAvatar: string;
   content: string;

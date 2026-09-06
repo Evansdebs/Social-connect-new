@@ -537,9 +537,21 @@ export async function deleteSchoolStaffFromFirebase(staffId: string) {
 // Notifications & Connection Requests
 // -------------------------------------------------------------
 
-export function subscribeToNotifications(onUpdate: (notifications: NotificationItem[]) => void) {
+export function subscribeToNotifications(
+  userId: string,
+  onUpdate: (notifications: NotificationItem[]) => void
+) {
+  if (!userId) {
+    // No authenticated user – do not open a global stream
+    onUpdate([]);
+    return () => {};
+  }
   try {
-    const q = query(collection(db, 'notifications'));
+    // Security: filter server-side so only notifications for this specific user are sent
+    const q = query(
+      collection(db, 'notifications'),
+      where('recipientId', '==', userId)
+    );
     return onSnapshot(
       q,
       (snapshot) => {
@@ -547,6 +559,8 @@ export function subscribeToNotifications(onUpdate: (notifications: NotificationI
         snapshot.forEach((d) => {
           list.push({ ...d.data(), id: d.id } as NotificationItem);
         });
+        // Sort newest first
+        list.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
         onUpdate(list);
       },
       (error) => console.warn('Firestore notifications snapshot warning:', error)
@@ -687,4 +701,57 @@ export async function deleteMarketItemFromFirebase(itemId: string) {
   }
 }
 
+// -------------------------------------------------------------
+// Opportunities
+// -------------------------------------------------------------
 
+export function subscribeToOpportunities(onUpdate: (opportunities: Opportunity[]) => void) {
+  try {
+    const q = query(collection(db, 'opportunities'));
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const list: Opportunity[] = [];
+        snapshot.forEach((d) => {
+          list.push({ ...d.data(), id: d.id } as Opportunity);
+        });
+        onUpdate(list);
+      },
+      (error) => console.warn('Firestore opportunities snapshot warning:', error)
+    );
+  } catch (e) {
+    return () => {};
+  }
+}
+
+export async function saveOpportunityToFirebase(opportunity: Opportunity) {
+  try {
+    await setDoc(doc(db, 'opportunities', opportunity.id), opportunity);
+  } catch (err) {
+    console.warn('saveOpportunityToFirebase fallback:', err);
+  }
+}
+
+export async function updateOpportunityInFirebase(oppId: string, partial: Partial<Opportunity>) {
+  try {
+    await updateDoc(doc(db, 'opportunities', oppId), partial);
+  } catch (err) {
+    console.warn('updateOpportunityInFirebase fallback:', err);
+  }
+}
+
+export async function deleteEventFromFirebase(eventId: string) {
+  try {
+    await deleteDoc(doc(db, 'events', eventId));
+  } catch (err) {
+    console.warn('deleteEventFromFirebase fallback:', err);
+  }
+}
+
+export async function deleteOpportunityFromFirebase(oppId: string) {
+  try {
+    await deleteDoc(doc(db, 'opportunities', oppId));
+  } catch (err) {
+    console.warn('deleteOpportunityFromFirebase fallback:', err);
+  }
+}

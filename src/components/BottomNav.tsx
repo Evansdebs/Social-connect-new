@@ -33,7 +33,7 @@ export const BottomNav: React.FC = () => {
       <button
         id="bottom-nav-create"
         onClick={() => openModal('create_post')}
-        className="flex flex-col items-center justify-center -mt-4 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white w-12 h-12 rounded-full shadow-md shadow-blue-500/30 active:scale-95 transition-transform"
+        className="flex flex-col items-center justify-center -mt-4 bg-blue-600 hover:bg-blue-700 text-white w-12 h-12 rounded-full shadow-md active:scale-95 transition-transform"
       >
         <PlusCircle className="w-7 h-7" />
       </button>

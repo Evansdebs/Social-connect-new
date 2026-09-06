@@ -242,7 +242,7 @@ export const ReelsViewer: React.FC = () => {
         )}
 
         {/* Rotating Sound Disc Icon */}
-        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-neutral-800 to-neutral-900 ring-2 ring-white/40 flex items-center justify-center animate-spin duration-[4000ms]">
+        <div className="w-9 h-9 rounded-full bg-neutral-900 ring-2 ring-white/40 flex items-center justify-center animate-spin duration-[4000ms]">
           <Music className="w-4 h-4 text-white" />
         </div>
       </div>

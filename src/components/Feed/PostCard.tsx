@@ -35,8 +35,13 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     openModal,
     showToast,
     setSelectedSchoolId,
-    setActiveTab
+    setActiveTab,
+    isSuperAdmin
   } = useApp();
+
+  const canDeletePost = Boolean(
+    currentUser && (currentUser.id === post.authorId || isSuperAdmin || currentUser.role === 'super_admin')
+  );
 
   const [showComments, setShowComments] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
@@ -84,7 +89,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     >
       {/* Official School Announcement Banner */}
       {post.isOfficialAnnouncement && (
-        <div className="mb-3 -mx-4 -mt-4 sm:-mx-5 sm:-mt-5 px-4 py-2 bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-700 text-white text-xs font-bold flex items-center justify-between rounded-t-2xl">
+        <div className="mb-3 -mx-4 -mt-4 sm:-mx-5 sm:-mt-5 px-4 py-2 bg-blue-700 text-white text-xs font-bold flex items-center justify-between rounded-t-2xl">
           <div className="flex items-center gap-1.5">
             <Megaphone className="w-3.5 h-3.5 text-amber-300" />
             <span>OFFICIAL SCHOOL ANNOUNCEMENT</span>
@@ -113,9 +118,18 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
               <Trash2 className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-rose-950">Delete this post permanently?</p>
+              {isSuperAdmin && currentUser?.id !== post.authorId && (
+                <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-md inline-block mb-1">
+                  SUPER ADMIN ACTION
+                </span>
+              )}
+              <p className="text-xs font-bold text-rose-950">
+                {isSuperAdmin && currentUser?.id !== post.authorId
+                  ? `Delete this post uploaded by ${post.authorName}?`
+                  : 'Delete this post permanently?'}
+              </p>
               <p className="text-[11px] text-rose-700 mt-0.5">
-                Once deleted, this post leaves the system completely and no one will see it.
+                Once deleted, this post leaves the system completely and will no longer appear on feeds.
               </p>
               <div className="flex items-center gap-2 mt-2.5">
                 <button
@@ -201,97 +215,96 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           </div>
         </div>
 
-        {/* More Menu Dropdown */}
-        <div className="relative">
-          <button
-            id={`post-menu-btn-${post.id}`}
-            onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
+        {/* More Actions / Super Admin Moderation */}
+        <div className="flex items-center gap-1">
+          {isSuperAdmin && currentUser?.id !== post.authorId && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[11px] font-bold border border-rose-200 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Super Admin: Delete this post"
+            >
+              <Trash2 className="w-3 h-3 text-rose-600" />
+              <span className="hidden sm:inline">Delete (Admin)</span>
+            </button>
+          )}
 
-          {showMoreMenu && (
-            <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-neutral-200 py-1 z-30 animate-in fade-in slide-in-from-top-1 text-xs">
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(window.location.href);
-                  showToast('Post link copied to clipboard!', 'info');
-                  setShowMoreMenu(false);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-neutral-50 flex items-center gap-2 text-neutral-700"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Copy Post Link</span>
-              </button>
+          {/* More Menu Dropdown */}
+          <div className="relative">
+            <button
+              id={`post-menu-btn-${post.id}`}
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
 
-              {post.mediaUrls && post.mediaUrls.length > 0 && post.allowDownloads && (
+            {showMoreMenu && (
+              <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-lg border border-neutral-200 py-1 z-30 animate-in fade-in slide-in-from-top-1 text-xs">
                 <button
                   onClick={() => {
-                    handleDownloadMedia();
+                    navigator.clipboard?.writeText(window.location.href);
+                    showToast('Post link copied to clipboard!', 'info');
                     setShowMoreMenu(false);
                   }}
                   className="w-full text-left px-3 py-2 hover:bg-neutral-50 flex items-center gap-2 text-neutral-700"
                 >
-                  <Download className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Download Media</span>
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Copy Post Link</span>
                 </button>
-              )}
 
-              {/* View Author Profile Option */}
-              <button
-                onClick={() => {
-                  setShowMoreMenu(false);
-                  viewProfile(post.authorId);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-neutral-50 flex items-center gap-2 text-neutral-700"
-              >
-                <Share2 className="w-3.5 h-3.5 opacity-0" />
-                <span>View Author Profile</span>
-              </button>
+                {post.mediaUrls && post.mediaUrls.length > 0 && post.allowDownloads && (
+                  <button
+                    onClick={() => {
+                      handleDownloadMedia();
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-neutral-50 flex items-center gap-2 text-neutral-700"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Download Media</span>
+                  </button>
+                )}
 
-              {/* Delete Post if Author or Super Admin */}
-              {currentUser && (currentUser.id === post.authorId || currentUser.role === 'super_admin') && (
-                <button
-                  id={`delete-post-${post.id}-btn`}
-                  onClick={() => {
-                    setShowMoreMenu(false);
-                    setShowDeleteConfirm(true);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 font-semibold border-t border-neutral-100"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                  <span>Delete Post</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => {
-                  openModal('report', { targetType: 'post', targetId: post.id });
-                  setShowMoreMenu(false);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 border-t border-neutral-100"
-              >
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Report Content</span>
-              </button>
-
-              {(post.authorId === currentUser.id || currentUser.role === 'super_admin') && (
+                {/* View Author Profile Option */}
                 <button
                   onClick={() => {
-                    if (confirm('Are you sure you want to delete this post?')) {
-                      deletePost(post.id);
-                    }
+                    setShowMoreMenu(false);
+                    viewProfile(post.authorId);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-neutral-50 flex items-center gap-2 text-neutral-700"
+                >
+                  <Share2 className="w-3.5 h-3.5 opacity-0" />
+                  <span>View Author Profile</span>
+                </button>
+
+                {/* Delete Post if Author or Super Admin */}
+                {canDeletePost && (
+                  <button
+                    id={`delete-post-${post.id}-btn`}
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      setShowDeleteConfirm(true);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 font-semibold border-t border-neutral-100"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>{isSuperAdmin && currentUser?.id !== post.authorId ? 'Delete Post (Admin)' : 'Delete Post'}</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    openModal('report', { targetType: 'post', targetId: post.id });
                     setShowMoreMenu(false);
                   }}
-                  className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 border-t border-neutral-100 font-bold"
+                  className="w-full text-left px-3 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 border-t border-neutral-100"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Post</span>
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>Report Content</span>
                 </button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

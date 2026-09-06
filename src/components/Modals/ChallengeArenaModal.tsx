@@ -24,12 +24,12 @@ interface ChallengeArenaModalProps {
 
 const EMOJIS = ['🔥', '⚡', '🏆', '💥', '🎯', '⭐', '🚀', '💪', '🎉', '🔥'];
 const CATEGORY_COLORS: Record<string, { a: string; b: string }> = {
-  Quiz: { a: 'from-blue-600 to-cyan-500', b: 'from-purple-600 to-fuchsia-500' },
-  Coding: { a: 'from-emerald-600 to-teal-500', b: 'from-orange-500 to-amber-400' },
-  Debate: { a: 'from-rose-600 to-pink-500', b: 'from-indigo-600 to-violet-500' },
-  Sports: { a: 'from-amber-500 to-yellow-400', b: 'from-red-600 to-rose-500' },
-  Dance: { a: 'from-pink-500 to-fuchsia-400', b: 'from-violet-600 to-purple-500' },
-  Talent: { a: 'from-teal-500 to-cyan-400', b: 'from-amber-600 to-orange-500' },
+  Quiz: { a: 'bg-blue-600', b: 'bg-indigo-600' },
+  Coding: { a: 'bg-emerald-600', b: 'bg-amber-600' },
+  Debate: { a: 'bg-rose-600', b: 'bg-indigo-600' },
+  Sports: { a: 'bg-amber-600', b: 'bg-red-600' },
+  Dance: { a: 'bg-pink-600', b: 'bg-purple-600' },
+  Talent: { a: 'bg-teal-600', b: 'bg-orange-600' },
 };
 
 export const ChallengeArenaModal: React.FC<ChallengeArenaModalProps> = ({ challenge, onClose }) => {
@@ -122,7 +122,7 @@ export const ChallengeArenaModal: React.FC<ChallengeArenaModalProps> = ({ challe
       <div className="relative z-10 w-full max-w-xl bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden flex flex-col max-h-[90vh]">
 
         {/* Stadium Banner */}
-        <div className="relative bg-gradient-to-b from-slate-800 to-slate-900 px-5 pt-5 pb-4 overflow-hidden flex-shrink-0">
+        <div className="relative bg-slate-900 border-b border-slate-800 px-5 pt-5 pb-4 overflow-hidden flex-shrink-0">
           <div className="absolute inset-0 opacity-5 pointer-events-none">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full border-2 border-white" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-52 h-52 rounded-full border border-white" />
@@ -160,7 +160,7 @@ export const ChallengeArenaModal: React.FC<ChallengeArenaModalProps> = ({ challe
           {/* Schools Face-off */}
           <div className="relative flex items-center gap-3 mt-2">
             <div className="flex-1 text-center">
-              <div className={`w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br ${colors.a} p-0.5 shadow-lg transition-transform duration-300 ${isCheeringA ? 'scale-110' : ''}`}>
+              <div className={`w-14 h-14 mx-auto rounded-2xl ${colors.a} p-0.5 shadow-md transition-transform duration-300 ${isCheeringA ? 'scale-110' : ''}`}>
                 <img src={challenge.schoolA.logo} alt={challenge.schoolA.name} className="w-full h-full rounded-[14px] object-cover bg-slate-800"
                   onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${challenge.schoolA.id}`; }} />
               </div>
@@ -177,7 +177,7 @@ export const ChallengeArenaModal: React.FC<ChallengeArenaModalProps> = ({ challe
             </div>
 
             <div className="flex-1 text-center">
-              <div className={`w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br ${colors.b} p-0.5 shadow-lg transition-transform duration-300 ${isCheeringB ? 'scale-110' : ''}`}>
+              <div className={`w-14 h-14 mx-auto rounded-2xl ${colors.b} p-0.5 shadow-md transition-transform duration-300 ${isCheeringB ? 'scale-110' : ''}`}>
                 <img src={challenge.schoolB.logo} alt={challenge.schoolB.name} className="w-full h-full rounded-[14px] object-cover bg-slate-800"
                   onError={(e) => { e.currentTarget.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${challenge.schoolB.id}`; }} />
               </div>
@@ -199,9 +199,9 @@ export const ChallengeArenaModal: React.FC<ChallengeArenaModalProps> = ({ challe
 
           {/* Battle Bar */}
           <div className="mt-4">
-            <div className="flex h-2.5 rounded-full overflow-hidden">
-              <div className={`bg-gradient-to-r ${colors.a} transition-all duration-500`} style={{ width: `${pctA}%` }} />
-              <div className={`bg-gradient-to-l ${colors.b} transition-all duration-500`} style={{ width: `${pctB}%` }} />
+            <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-800">
+              <div className={`${colors.a} transition-all duration-500`} style={{ width: `${pctA}%` }} />
+              <div className={`${colors.b} transition-all duration-500`} style={{ width: `${pctB}%` }} />
             </div>
             <div className="flex justify-between mt-1">
               <span className="text-[10px] font-black text-slate-300">{pctA}%</span>
@@ -213,12 +213,12 @@ export const ChallengeArenaModal: React.FC<ChallengeArenaModalProps> = ({ challe
           {/* Cheer Buttons */}
           <div className="mt-3 flex gap-2">
             <button onClick={() => handleCheer(challenge.schoolA.id, 'A')}
-              className={`flex-1 py-2.5 rounded-2xl font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 bg-gradient-to-r ${colors.a} text-white shadow-lg hover:brightness-110`}>
+              className={`flex-1 py-2.5 rounded-2xl font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 ${colors.a} hover:brightness-110 text-white shadow-md`}>
               <Zap className="w-3.5 h-3.5" />
               Cheer {challenge.schoolA.name.split(' ')[0]}
             </button>
             <button onClick={() => handleCheer(challenge.schoolB.id, 'B')}
-              className={`flex-1 py-2.5 rounded-2xl font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 bg-gradient-to-r ${colors.b} text-white shadow-lg hover:brightness-110`}>
+              className={`flex-1 py-2.5 rounded-2xl font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 ${colors.b} hover:brightness-110 text-white shadow-md`}>
               <Zap className="w-3.5 h-3.5" />
               Cheer {challenge.schoolB.name.split(' ')[0]}
             </button>

@@ -49,7 +49,7 @@ export const DEFAULT_BLANK_SCHOOL: School = {
 };
 
 
-export const INITIAL_DEMO_SCHOOLS: School[] = [
+export const OFFICIAL_SCHOOL_DIRECTORY: School[] = [
   {
     id: 'school-achimota',
     name: 'Achimota Senior High',
@@ -115,7 +115,7 @@ export const INITIAL_DEMO_SCHOOLS: School[] = [
   }
 ];
 
-export const INITIAL_DEMO_CHALLENGES: Challenge[] = [
+export const OFFICIAL_CAMPUS_CHALLENGES: Challenge[] = [
   {
     id: 'challenge-nsmq-2026',
     title: 'National Science & Maths Quiz (NSMQ) Grand Finals',
@@ -196,7 +196,7 @@ export const INITIAL_DEMO_CHALLENGES: Challenge[] = [
   }
 ];
 
-export const INITIAL_DEMO_EVENTS: CampusEvent[] = [
+export const OFFICIAL_CAMPUS_EVENTS: CampusEvent[] = [
   {
     id: 'event-nsmq-finals-2026',
     title: 'NSMQ 2026 Grand Championship Finals',
@@ -275,7 +275,7 @@ export const INITIAL_DEMO_EVENTS: CampusEvent[] = [
   }
 ];
 
-export const INITIAL_DEMO_OPPORTUNITIES: Opportunity[] = [
+export const OFFICIAL_CAMPUS_OPPORTUNITIES: Opportunity[] = [
   {
     id: 'opp-google-fellowship',
     title: 'Google Africa STEM Scholars Fellowship 2026',
@@ -325,4 +325,12 @@ export const INITIAL_DEMO_OPPORTUNITIES: Opportunity[] = [
     isSaved: true
   }
 ];
+
+// Backwards-compatibility exports
+export {
+  OFFICIAL_SCHOOL_DIRECTORY as INITIAL_DEMO_SCHOOLS,
+  OFFICIAL_CAMPUS_CHALLENGES as INITIAL_DEMO_CHALLENGES,
+  OFFICIAL_CAMPUS_EVENTS as INITIAL_DEMO_EVENTS,
+  OFFICIAL_CAMPUS_OPPORTUNITIES as INITIAL_DEMO_OPPORTUNITIES
+};
 

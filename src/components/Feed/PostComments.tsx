@@ -9,7 +9,7 @@ interface PostCommentsProps {
 }
 
 export const PostComments: React.FC<PostCommentsProps> = ({ post, postComments }) => {
-  const { currentUser, addComment, deleteComment, viewProfile, openAvatarPreview, users } = useApp();
+  const { currentUser, isSuperAdmin, addComment, deleteComment, viewProfile, openAvatarPreview, users } = useApp();
   const [commentInput, setCommentInput] = useState('');
 
   const handleAddCommentSubmit = (e: React.FormEvent) => {
@@ -90,11 +90,11 @@ export const PostComments: React.FC<PostCommentsProps> = ({ post, postComments }
               <div className="flex items-center gap-3 px-2 pt-1 text-[11px] text-neutral-500">
                 <button className="hover:text-blue-600 font-medium">Like</button>
                 <button className="hover:text-blue-600 font-medium">Reply</button>
-                {comm.authorId === currentUser.id && (
+                {(comm.authorId === currentUser.id || isSuperAdmin || currentUser.role === 'super_admin') && (
                   <button
                     onClick={() => deleteComment(post.id, comm.id)}
-                    className="hover:text-rose-600 text-neutral-400"
-                    title="Delete comment"
+                    className="hover:text-rose-600 text-neutral-400 p-1 rounded transition-colors"
+                    title={isSuperAdmin && comm.authorId !== currentUser.id ? 'Delete comment (Super Admin)' : 'Delete comment'}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>

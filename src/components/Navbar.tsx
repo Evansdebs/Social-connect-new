@@ -117,11 +117,11 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
             }}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-sm shadow-blue-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-xs group-hover:bg-blue-700 transition-colors">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-600 bg-clip-text text-transparent">
+              <span className="font-extrabold text-lg tracking-tight text-neutral-900">
                 Campus Connect
               </span>
               <span className="hidden sm:block text-[10px] uppercase font-semibold tracking-wider text-neutral-400">
@@ -225,7 +225,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
 
             {/* Notifications Dropdown */}
             {showNotifMenu && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-neutral-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-sm sm:w-96 bg-white rounded-2xl shadow-xl border border-neutral-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-4 py-2 border-b border-neutral-100 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-neutral-800">Notifications</span>
@@ -408,7 +408,7 @@ export const Navbar: React.FC<{ onToggleMobileMenu?: () => void; isMobileMenuOpe
 
             {/* Persona Switcher Dropdown */}
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-neutral-200 py-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-xs sm:w-72 bg-white rounded-2xl shadow-xl border border-neutral-200 py-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-4 py-2 border-b border-neutral-100">
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-neutral-400 uppercase font-semibold">Active Account</p>

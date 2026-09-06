@@ -68,7 +68,7 @@ export const AvatarPreviewModal: React.FC = () => {
 
         {/* Profile Picture Frame */}
         <div className="relative mt-2 mb-4 group">
-          <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden p-1.5 bg-gradient-to-tr from-blue-500 via-indigo-500 to-sky-400 shadow-xl shadow-blue-500/20">
+          <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden p-1 bg-neutral-800 border-2 border-neutral-700 shadow-2xl">
             <img
               src={avatar}
               alt={name}

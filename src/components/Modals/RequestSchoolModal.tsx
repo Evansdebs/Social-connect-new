@@ -71,7 +71,7 @@ export const RequestSchoolModal: React.FC<RequestSchoolModalProps> = ({
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-700 text-white flex items-start justify-between">
+        <div className="p-5 bg-blue-700 text-white flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center border border-white/20">
               <Building2 className="w-5 h-5 text-white" />

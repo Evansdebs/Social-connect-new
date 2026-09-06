@@ -315,7 +315,7 @@ export const LoginView: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between relative overflow-hidden">
-      {/* Background Decorative Ambient Gradients */}
+      {/* Background Decorative Ambient Glows */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/3 -right-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -323,7 +323,7 @@ export const LoginView: React.FC = () => {
       {/* Top Brand Header Bar */}
       <header className="w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-md">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>

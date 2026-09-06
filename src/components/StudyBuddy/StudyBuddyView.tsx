@@ -35,37 +35,21 @@ const QUICK_PROMPTS = [
   'Help me solve simultaneous equations step-by-step',
 ];
 
-const GEMINI_API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-
 async function askGemini(messages: { role: string; content: string }[], subject: string): Promise<string> {
-  const apiKey = GEMINI_API_KEY;
-  if (!apiKey) {
-    return `💡 **AI Study Buddy is ready!**\n\nPlease configure your \`VITE_GEMINI_API_KEY\` in your \`.env\` file to enable live AI-generated tutoring.\n\nIn the meantime, here are proven campus revision strategies:\n\n• **Pomodoro Technique**: 25 minutes of deep focus followed by 5 minutes of rest\n• **Active Recall**: Test yourself with flashcards or practice questions before reading notes\n• **Feynman Technique**: Teach the core concept out loud in plain, everyday language\n• **Formula Mind Maps**: Connect key equations to real-life physical examples\n• **Peer Study**: Discuss past examination questions with classmates on Campus Connect!`;
-  }
-
-  const systemPrompt = `You are an encouraging, knowledgeable AI Study Buddy for secondary school and university students in Ghana and West Africa. You specialize in ${subject}. Your tone is friendly, clear, and motivating. You use simple language, relatable examples (African context when helpful), and structured responses with emoji. Always encourage students and celebrate their progress.`;
-
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch('/api/ai/studybuddy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemPrompt }] },
-        contents: messages.map((m) => ({
-          role: m.role === 'user' ? 'user' : 'model',
-          parts: [{ text: m.content }],
-        })),
-        generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
-      }),
+      body: JSON.stringify({ messages, subject }),
     });
 
     const data = await response.json();
-    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      return data.candidates[0].content.parts[0].text;
+    if (data.text) {
+      return data.text;
     }
-    return 'I could not generate a response. Please try asking again.';
-  } catch {
-    return '⚠️ Connection error. Please check your network connection and try again.';
+    return 'I could not generate a response right now. Please try asking again.';
+  } catch (err) {
+    return '⚠️ Unable to connect to AI study service. Please check your network and try again.';
   }
 }
 
@@ -163,11 +147,11 @@ export const StudyBuddyView: React.FC = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] min-h-[550px] bg-white rounded-3xl border border-neutral-200/80 shadow-xs overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 text-white px-5 py-4">
+      <div className="shrink-0 bg-slate-900 text-white px-5 py-4 border-b border-slate-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 backdrop-blur-xs rounded-2xl flex items-center justify-center">
-              <Brain className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700">
+              <Brain className="w-5 h-5 text-blue-400" />
             </div>
             <div>
               <h1 className="font-black text-base tracking-tight">AI Study Buddy</h1>
@@ -183,12 +167,12 @@ export const StudyBuddyView: React.FC = () => {
         </div>
 
         {/* Subject selector */}
-        <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {SUBJECTS.map((sub) => (
             <button
               key={sub.id}
               onClick={() => setSelectedSubject(sub.id)}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
                 selectedSubject === sub.id
                   ? 'bg-white text-neutral-900 shadow-md'
                   : 'bg-white/15 text-white/90 hover:bg-white/25'
@@ -206,7 +190,7 @@ export const StudyBuddyView: React.FC = () => {
         {messages.map((msg) => (
           <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
             {msg.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-xs">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
             )}
@@ -249,14 +233,14 @@ export const StudyBuddyView: React.FC = () => {
 
         {isLoading && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-xs">
               <Sparkles className="w-4 h-4 text-white animate-pulse" />
             </div>
             <div className="bg-white border border-neutral-200 rounded-2xl rounded-bl-xs px-4 py-3 shadow-xs">
               <div className="flex gap-1.5 items-center h-4">
-                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -266,12 +250,12 @@ export const StudyBuddyView: React.FC = () => {
 
       {/* Quick Prompts */}
       <div className="shrink-0 px-4 py-2 border-t border-neutral-100 bg-white">
-        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex flex-wrap items-center gap-1.5 max-h-24 overflow-y-auto">
           {QUICK_PROMPTS.map((prompt, i) => (
             <button
               key={i}
               onClick={() => sendMessage(prompt)}
-              className="shrink-0 text-[10px] font-medium px-2.5 py-1.5 rounded-xl bg-violet-50 text-violet-700 border border-violet-100 hover:bg-violet-100 transition-colors whitespace-nowrap cursor-pointer"
+              className="text-[10px] font-medium px-2.5 py-1 rounded-xl bg-neutral-100 text-neutral-700 border border-neutral-200 hover:bg-neutral-200 transition-colors cursor-pointer text-left"
             >
               {prompt}
             </button>
@@ -282,7 +266,7 @@ export const StudyBuddyView: React.FC = () => {
       {/* Input Form */}
       <div className="shrink-0 p-3.5 bg-white border-t border-neutral-200">
         <form onSubmit={handleSubmit} className="flex gap-2">
-          <div className="flex-1 flex items-center bg-neutral-100 hover:bg-white border border-neutral-200 hover:border-violet-300 rounded-2xl px-4 py-2.5 gap-2 transition-all focus-within:border-violet-500 focus-within:ring-1 focus-within:ring-violet-200">
+          <div className="flex-1 flex items-center bg-neutral-100 hover:bg-white border border-neutral-200 hover:border-blue-300 rounded-2xl px-4 py-2.5 gap-2 transition-all focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-200">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -290,12 +274,12 @@ export const StudyBuddyView: React.FC = () => {
               className="flex-1 bg-transparent text-xs text-neutral-900 placeholder-neutral-400 outline-none"
               disabled={isLoading}
             />
-            <Lightbulb className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            <Lightbulb className="w-3.5 h-3.5 text-blue-500 shrink-0" />
           </div>
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="p-2.5 bg-gradient-to-br from-violet-600 to-blue-600 disabled:opacity-40 text-white rounded-2xl transition-all hover:brightness-110 active:scale-95 shadow-md shadow-violet-500/20 cursor-pointer"
+            className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl transition-all shadow-xs cursor-pointer"
           >
             <Send className="w-4 h-4" />
           </button>
